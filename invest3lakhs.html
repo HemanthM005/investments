@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Invest ₹3 Lakhs — India 2026</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
+  header{background:linear-gradient(135deg,#1a1f2e,#2d1b69);padding:28px 24px 20px;text-align:center;border-bottom:1px solid #2d3748}
+  header h1{font-size:1.6rem;font-weight:700;color:#a78bfa}
+  header p{color:#94a3b8;font-size:.9rem;margin-top:6px}
+  .market-banner{background:#1e2433;border-left:4px solid #f59e0b;padding:12px 20px;margin:16px;border-radius:8px;font-size:.85rem;color:#fbbf24}
+  .market-banner strong{color:#f59e0b}
+  nav{display:flex;flex-wrap:wrap;gap:8px;padding:14px 16px;background:#161b27;border-bottom:1px solid #2d3748}
+  nav button{background:#1e2433;border:1px solid #374151;color:#94a3b8;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:.8rem;transition:all .2s}
+  nav button.active,nav button:hover{background:#4f46e5;color:#fff;border-color:#4f46e5}
+  .section{display:none;padding:16px}
+  .section.active{display:block}
+  .alloc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+  .alloc-card{background:#1e2433;border:1px solid #2d3748;border-radius:12px;padding:14px;text-align:center}
+  .alloc-card .emoji{font-size:1.8rem;margin-bottom:6px}
+  .alloc-card .amount{font-size:1.2rem;font-weight:700;color:#a78bfa}
+  .alloc-card .label{font-size:.75rem;color:#94a3b8;margin-top:2px}
+  .alloc-card .pct{font-size:.8rem;color:#6ee7b7;font-weight:600}
+  .card{background:#1e2433;border:1px solid #2d3748;border-radius:12px;padding:18px;margin-bottom:14px}
+  .card h3{font-size:1rem;font-weight:700;color:#e2e8f0;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .card p,.card li{font-size:.85rem;color:#94a3b8;line-height:1.6}
+  .card ul{padding-left:18px;margin-top:6px}
+  .badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:.7rem;font-weight:600;margin-left:6px}
+  .badge.low{background:#064e3b;color:#6ee7b7}
+  .badge.med{background:#1e3a5f;color:#93c5fd}
+  .badge.high{background:#4c1d1d;color:#fca5a5}
+  .badge.hot{background:#451a03;color:#fbbf24}
+  .stat-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #2d3748;font-size:.82rem}
+  .stat-row:last-child{border:none}
+  .stat-label{color:#94a3b8}
+  .stat-val{font-weight:600;color:#e2e8f0}
+  .stat-val.green{color:#6ee7b7}
+  .stat-val.red{color:#f87171}
+  .stat-val.yellow{color:#fbbf24}
+  .chart-bar-wrap{margin-top:14px}
+  .bar-label{display:flex;justify-content:space-between;font-size:.78rem;color:#94a3b8;margin-bottom:4px}
+  .bar-outer{background:#2d3748;border-radius:6px;height:10px;overflow:hidden;margin-bottom:10px}
+  .bar-inner{height:100%;border-radius:6px;transition:width 1s ease}
+  .tip-box{background:#1a2744;border:1px solid #2563eb;border-radius:10px;padding:12px 16px;margin-top:12px;font-size:.82rem;color:#93c5fd}
+  .tip-box strong{color:#60a5fa}
+  .warning-box{background:#2d1515;border:1px solid #7f1d1d;border-radius:10px;padding:12px 16px;margin-top:12px;font-size:.82rem;color:#fca5a5}
+  .fund-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #2d3748;font-size:.82rem}
+  .fund-name{color:#e2e8f0;font-weight:500}
+  .fund-ret{color:#6ee7b7;font-weight:700}
+  .step{display:flex;gap:12px;margin-bottom:14px;align-items:flex-start}
+  .step-num{background:#4f46e5;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0;margin-top:2px}
+  .step-content h4{font-size:.88rem;color:#e2e8f0;font-weight:600}
+  .step-content p{font-size:.8rem;color:#94a3b8;margin-top:2px;line-height:1.5}
+  h2{font-size:1.1rem;font-weight:700;color:#a78bfa;margin-bottom:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>💰 Invest ₹3 Lakhs Smartly — India, March 2026</h1>
+  <p>Real-time market context · Diversified strategy · All risk levels</p>
+</header>
+
+<div class="market-banner">
+  <strong>📊 Current Market Pulse (March 11, 2026):</strong> Sensex at ~78,206 | Nifty 50 at ~24,261 | Market down ~7% over past month amid FII selling & geopolitical tension. <strong>This is actually a good time to start SIPs — buy at lower prices!</strong>
+</div>
+
+<nav>
+  <button class="active" onclick="show('overview')">📊 Overview</button>
+  <button onclick="show('safe')">🛡️ Safe</button>
+  <button onclick="show('growth')">📈 Growth</button>
+  <button onclick="show('gold')">🥇 Gold</button>
+  <button onclick="show('stocks')">🚀 Stocks</button>
+  <button onclick="show('howto')">🗺️ How to Start</button>
+</nav>
+
+<!-- OVERVIEW -->
+<div id="overview" class="section active">
+  <h2>Your ₹3 Lakh Allocation Plan</h2>
+  <div class="alloc-grid">
+    <div class="alloc-card">
+      <div class="emoji">🛡️</div>
+      <div class="amount">₹60,000</div>
+      <div class="pct">20%</div>
+      <div class="label">Emergency + FD (Safety Net)</div>
+    </div>
+    <div class="alloc-card">
+      <div class="emoji">📈</div>
+      <div class="amount">₹1,20,000</div>
+      <div class="pct">40%</div>
+      <div class="label">Mutual Funds (SIP)</div>
+    </div>
+    <div class="alloc-card">
+      <div class="emoji">🥇</div>
+      <div class="amount">₹45,000</div>
+      <div class="pct">15%</div>
+      <div class="label">Gold ETF / Fund</div>
+    </div>
+    <div class="alloc-card">
+      <div class="emoji">🚀</div>
+      <div class="amount">₹60,000</div>
+      <div class="pct">20%</div>
+      <div class="label">Direct Stocks / Index ETF</div>
+    </div>
+    <div class="alloc-card">
+      <div class="emoji">🏗️</div>
+      <div class="amount">₹15,000</div>
+      <div class="pct">5%</div>
+      <div class="label">REITs / Bonds</div>
+    </div>
+  </div>
+
+  <div class="chart-bar-wrap">
+    <div class="bar-label"><span>Mutual Funds</span><span>40% — ₹1.2L</span></div>
+    <div class="bar-outer"><div class="bar-inner" style="width:40%;background:#4f46e5"></div></div>
+    <div class="bar-label"><span>Safety (FD)</span><span>20% — ₹60K</span></div>
+    <div class="bar-outer"><div class="bar-inner" style="width:20%;background:#10b981"></div></div>
+    <div class="bar-label"><span>Stocks / ETF</span><span>20% — ₹60K</span></div>
+    <div class="bar-outer"><div class="bar-inner" style="width:20%;background:#f59e0b"></div></div>
+    <div class="bar-label"><span>Gold</span><span>15% — ₹45K</span></div>
+    <div class="bar-outer"><div class="bar-inner" style="width:15%;background:#fbbf24"></div></div>
+    <div class="bar-label"><span>REITs / Bonds</span><span>5% — ₹15K</span></div>
+    <div class="bar-outer"><div class="bar-inner" style="width:5%;background:#ec4899"></div></div>
+  </div>
+
+  <div class="tip-box" style="margin-top:16px">
+    <strong>💡 Why this allocation right now?</strong> Nifty has corrected ~10% from its December 2026 peak of 26,325. Analysts at Morgan Stanley and Jefferies are bullish on Sensex hitting 95,000–1,07,000 by year end. This correction is a SIP opportunity. Gold is also trending strong amid global uncertainty. This mix balances safety, growth, and hedging perfectly.
+  </div>
+</div>
+
+<!-- SAFE -->
+<div id="safe" class="section">
+  <h2>🛡️ Safety Net — ₹60,000 (20%)</h2>
+  <p style="font-size:.83rem;color:#94a3b8;margin-bottom:14px">Before you invest anywhere, you need a liquid cushion. This is non-negotiable.</p>
+
+  <div class="card">
+    <h3>🏦 Bank Fixed Deposit (FD) — ₹40,000 <span class="badge low">LOW RISK</span></h3>
+    <div class="stat-row"><span class="stat-label">Current Interest Rate</span><span class="stat-val green">6.5% – 7.5% p.a.</span></div>
+    <div class="stat-row"><span class="stat-label">Suggested Tenure</span><span class="stat-val">1 year (renewable)</span></div>
+    <div class="stat-row"><span class="stat-label">Insurance Cover</span><span class="stat-val">Up to ₹5 Lakh (DICGC)</span></div>
+    <div class="stat-row"><span class="stat-label">Best Banks (Mar 2026)</span><span class="stat-val">SBI, HDFC, ICICI, IndusInd</span></div>
+    <p style="margin-top:10px">Small Finance Banks like Unity SFB or Suryoday SFB offer 8–9% FD rates, but carry slightly more risk than large banks. Suitable if you want slightly better returns with acceptable safety.</p>
+    <div class="tip-box"><strong>Pro Tip:</strong> Keep ₹20,000 in a liquid savings account (like Fi, Jupiter, or Kotak 811) for instant emergency access. The remaining ₹40,000 goes into the FD.</div>
+  </div>
+
+  <div class="card">
+    <h3>📮 Post Office Schemes — Optional Alternative <span class="badge low">GOVT BACKED</span></h3>
+    <div class="stat-row"><span class="stat-label">Post Office RD</span><span class="stat-val green">7.0% p.a. (SBI comparable)</span></div>
+    <div class="stat-row"><span class="stat-label">NSC (5 years)</span><span class="stat-val green">7.7% p.a.</span></div>
+    <div class="stat-row"><span class="stat-label">Risk</span><span class="stat-val green">Zero — 100% Govt backed</span></div>
+    <p style="margin-top:8px">If you distrust private banks entirely, Post Office schemes are the safest in India — backed by the Government of India itself.</p>
+  </div>
+</div>
+
+<!-- GROWTH -->
+<div id="growth" class="section">
+  <h2>📈 Mutual Funds via SIP — ₹1,20,000 (40%)</h2>
+  <p style="font-size:.83rem;color:#94a3b8;margin-bottom:14px">Don't invest ₹1.2L as lump sum. Convert it to ₹10,000/month SIP for 12 months. This way you buy more units when market is low (like right now!) and fewer when it's high — called Rupee Cost Averaging.</p>
+
+  <div class="card">
+    <h3>🏛️ Nifty 50 Index Fund — ₹4,000/month <span class="badge med">MED RISK</span></h3>
+    <div class="stat-row"><span class="stat-label">What it does</span><span class="stat-val">Tracks India's top 50 companies</span></div>
+    <div class="stat-row"><span class="stat-label">10-yr avg returns</span><span class="stat-val green">~13–15% p.a.</span></div>
+    <div class="stat-row"><span class="stat-label">Expense Ratio</span><span class="stat-val">~0.1% (very low)</span></div>
+    <div class="stat-row"><span class="stat-label">Best Funds</span><span class="stat-val">UTI Nifty 50, Nippon Nifty 50</span></div>
+    <p style="margin-top:8px">The simplest, most efficient long-term investment. You own a slice of India's 50 biggest companies — Reliance, TCS, HDFC Bank, Infosys, and more. When India grows, you grow.</p>
+  </div>
+
+  <div class="card">
+    <h3>🌊 Flexi Cap Fund — ₹3,000/month <span class="badge med">MED-HIGH RISK</span></h3>
+    <div class="stat-row"><span class="stat-label">What it does</span><span class="stat-val">Invests across large, mid & small cap</span></div>
+    <div class="stat-row"><span class="stat-label">5-yr avg returns</span><span class="stat-val green">~16–20% p.a.</span></div>
+    <div class="stat-row"><span class="stat-label">Best Funds (2026)</span><span class="stat-val">HDFC Flexi Cap, Parag Parikh Flexi Cap</span></div>
+    <p style="margin-top:8px">Fund manager actively picks stocks across all company sizes. Parag Parikh also invests ~25% in international stocks (Google, Meta, etc.) giving you global diversification automatically.</p>
+  </div>
+
+  <div class="card">
+    <h3>⚖️ Hybrid / Balanced Advantage Fund — ₹2,000/month <span class="badge low">LOW-MED RISK</span></h3>
+    <div class="stat-row"><span class="stat-label">What it does</span><span class="stat-val">Auto-balances equity & debt based on market</span></div>
+    <div class="stat-row"><span class="stat-label">Expected returns</span><span class="stat-val green">~10–13% p.a.</span></div>
+    <div class="stat-row"><span class="stat-label">Best Funds</span><span class="stat-val">HDFC Balanced Advantage, ICICI Pru BAF</span></div>
+    <p style="margin-top:8px">When markets are expensive, it shifts to debt. When markets are cheap (like now), it shifts to equity. This is a smart, auto-pilot fund — great for beginners who don't want to worry.</p>
+  </div>
+
+  <div class="card">
+    <h3>🔥 Mid/Small Cap Fund — ₹1,000/month <span class="badge high">HIGH RISK</span></h3>
+    <div class="stat-row"><span class="stat-label">What it does</span><span class="stat-val">Invests in emerging, faster-growing companies</span></div>
+    <div class="stat-row"><span class="stat-label">5-yr avg returns</span><span class="stat-val green">~20–28% p.a. (but volatile!)</span></div>
+    <div class="stat-row"><span class="stat-label">Best Funds</span><span class="stat-val">Nippon Small Cap, SBI Small Cap</span></div>
+    <p style="margin-top:8px">High risk, high reward. Can fall 40–50% in a crash, but historically recovers and outperforms over 7+ years. Keep only a small portion here.</p>
+    <div class="warning-box"><strong>⚠️ Warning:</strong> Only invest in small cap if you can stay invested for 7+ years without touching the money.</div>
+  </div>
+
+  <div class="tip-box">
+    <strong>📱 Platforms to use:</strong> Groww, Zerodha Coin, Paytm Money, or MFCentral — all SEBI-regulated, zero commission for direct plans. Always choose <strong>Direct Plan</strong> over Regular Plan to avoid paying extra commission to distributors.
+  </div>
+</div>
+
+<!-- GOLD -->
+<div id="gold" class="section">
+  <h2>🥇 Gold — ₹45,000 (15%)</h2>
+  <p style="font-size:.83rem;color:#94a3b8;margin-bottom:14px">Gold has been one of the best-performing assets in India over 3–5 years. With global uncertainty, geopolitical tension, and FII outflows, gold remains a critical hedge in 2026.</p>
+
+  <div class="card">
+    <h3>📊 Gold Performance (Real Data) <span class="badge hot">🔥 TRENDING</span></h3>
+    <div class="stat-row"><span class="stat-label">Gold ETF 3-yr CAGR (Nippon)</span><span class="stat-val green">~39.6%</span></div>
+    <div class="stat-row"><span class="stat-label">Gold ETF 5-yr CAGR (avg)</span><span class="stat-val green">~27%</span></div>
+    <div class="stat-row"><span class="stat-label">Gold AUM in India (early 2026)</span><span class="stat-val">₹32,500+ Crore</span></div>
+    <div class="stat-row"><span class="stat-label">Current sentiment</span><span class="stat-val yellow">Bullish (safe haven demand)</span></div>
+  </div>
+
+  <div class="card">
+    <h3>💻 Gold ETF — ₹30,000 (Recommended) <span class="badge low">LOW RISK</span></h3>
+    <p>Traded on NSE/BSE just like stocks. Backed by 99.5% pure physical gold held by the fund. No storage risk, no purity concern, instant liquidity.</p>
+    <div style="margin-top:10px">
+      <div class="fund-row"><span class="fund-name">LIC MF Gold ETF</span><span class="fund-ret">#1 by 5-yr CAGR</span></div>
+      <div class="fund-row"><span class="fund-name">Nippon India Gold ETF</span><span class="fund-ret">Largest, most liquid</span></div>
+      <div class="fund-row"><span class="fund-name">HDFC Gold ETF</span><span class="fund-ret">Reliable, large AUM</span></div>
+      <div class="fund-row"><span class="fund-name">ICICI Prudential Gold ETF</span><span class="fund-ret">Long-term track record</span></div>
+      <div class="fund-row"><span class="fund-name">SBI Gold ETF</span><span class="fund-ret">Trust + low cost</span></div>
+    </div>
+    <p style="margin-top:8px">Need a Demat account to buy ETFs. You can buy even 1 unit (~₹600–800 currently).</p>
+  </div>
+
+  <div class="card">
+    <h3>🏅 Gold Mutual Fund (SIP) — ₹15,000 (via SIP) <span class="badge low">LOW RISK</span></h3>
+    <p>If you don't have a Demat account, Gold Mutual Funds are a perfect alternative. They invest in Gold ETFs on your behalf. You can do SIP from ₹100/month.</p>
+    <div style="margin-top:10px">
+      <div class="fund-row"><span class="fund-name">Nippon India Gold Savings Fund</span><span class="fund-ret">Most popular</span></div>
+      <div class="fund-row"><span class="fund-name">Kotak Gold Fund</span><span class="fund-ret">Low tracking error</span></div>
+      <div class="fund-row"><span class="fund-name">HDFC Gold Fund</span><span class="fund-ret">Trusted & stable</span></div>
+    </div>
+    <div class="tip-box" style="margin-top:10px"><strong>💡 Current View:</strong> Multiple macro forces — weak USD, central bank gold buying, geopolitical tensions, and Fed rate uncertainty — are supporting gold prices heading into 2026. A 10–15% portfolio allocation to gold is ideal right now.</div>
+  </div>
+</div>
+
+<!-- STOCKS -->
+<div id="stocks" class="section">
+  <h2>🚀 Direct Stocks + REITs — ₹75,000 (25%)</h2>
+
+  <div class="card">
+    <h3>📉 Current Market Context <span class="badge hot">OPPORTUNITY</span></h3>
+    <p style="margin-top:4px">The Nifty 50 has fallen ~10% from its December 2025 peak of 26,325 and is now at 24,261. Sensex is at 78,206 — down ~7% in one month. This correction is driven by FII outflows (selling ₹4,630 Cr/week), IT sector pressure, geopolitical tensions, and crude oil volatility — NOT by poor Indian fundamentals.</p>
+    <div class="stat-row" style="margin-top:8px"><span class="stat-label">Sensex (Mar 10, 2026)</span><span class="stat-val yellow">78,206</span></div>
+    <div class="stat-row"><span class="stat-label">Nifty 50 (Mar 10, 2026)</span><span class="stat-val yellow">24,261</span></div>
+    <div class="stat-row"><span class="stat-label">Morgan Stanley Target (Dec 2026)</span><span class="stat-val green">95,000 (base) – 1,07,000 (bull)</span></div>
+    <div class="stat-row"><span class="stat-label">Jefferies Outlook</span><span class="stat-val green">10–15% more upside possible</span></div>
+    <div class="tip-box" style="margin-top:10px"><strong>💡 What this means for you:</strong> You're potentially buying stocks near a local bottom. Don't invest ₹60,000 at once — stagger it over 3–4 months.</div>
+  </div>
+
+  <div class="card">
+    <h3>📦 Nifty 50 / Nifty Next 50 ETF — ₹30,000 <span class="badge med">MED RISK</span></h3>
+    <p>The safest way to invest in the stock market. You own all 50 top companies with one click. Trade it like a stock on Zerodha, Groww, or Angel One.</p>
+    <div class="stat-row" style="margin-top:8px"><span class="stat-label">Nifty BeES (Nippon)</span><span class="stat-val">Most liquid Nifty ETF</span></div>
+    <div class="stat-row"><span class="stat-label">Mirae Asset Nifty 50 ETF</span><span class="stat-val">Low expense ratio</span></div>
+    <div class="stat-row"><span class="stat-label">Motilal Nifty Next 50 ETF</span><span class="stat-val">Mid-large blend exposure</span></div>
+  </div>
+
+  <div class="card">
+    <h3>📌 Blue-Chip Direct Stocks — ₹30,000 <span class="badge med">MED-HIGH RISK</span></h3>
+    <p style="margin-bottom:8px">Only if you're willing to do some research. Based on March 2026 market trends, these sectors are showing relative strength:</p>
+    <div class="stat-row"><span class="stat-label">🏥 Healthcare / Pharma</span><span class="stat-val green">+2–2.2% even during crash</span></div>
+    <div class="stat-row"><span class="stat-label">⚙️ Metal / Infra</span><span class="stat-val green">Positive momentum</span></div>
+    <div class="stat-row"><span class="stat-label">🏦 Banking (ICICI, HDFC)</span><span class="stat-val yellow">Corrected — value opportunity</span></div>
+    <div class="stat-row"><span class="stat-label">🚗 Auto (M&M, Maruti)</span><span class="stat-val yellow">Recovery leader in rebound</span></div>
+    <div class="stat-row"><span class="stat-label">💻 IT (TCS, Infosys)</span><span class="stat-val red">Weak — under US slowdown pressure</span></div>
+    <div class="warning-box"><strong>⚠️</strong> Don't put all ₹30,000 in one stock. Spread across 3–5 companies in different sectors. Never invest borrowed money in stocks.</div>
+  </div>
+
+  <div class="card">
+    <h3>🏢 REITs (Real Estate Investment Trusts) — ₹15,000 <span class="badge med">MED RISK</span></h3>
+    <p>Invest in commercial real estate (offices, malls) without buying property. Listed on NSE/BSE. Pay regular rental dividends to investors.</p>
+    <div class="stat-row" style="margin-top:8px"><span class="stat-label">Embassy Office Parks REIT</span><span class="stat-val">India's largest REIT</span></div>
+    <div class="stat-row"><span class="stat-label">Mindspace Business Parks REIT</span><span class="stat-val">Strong rental income</span></div>
+    <div class="stat-row"><span class="stat-label">Dividend Yield</span><span class="stat-val green">~6–8% annually</span></div>
+    <p style="margin-top:6px">Nifty Realty fell 4.9% recently — meaning REITs are on sale right now. Good entry point for income-seeking investors.</p>
+  </div>
+</div>
+
+<!-- HOW TO START -->
+<div id="howto" class="section">
+  <h2>🗺️ Step-by-Step: How to Start Today</h2>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <h4>Open a Demat + Trading Account</h4>
+      <p>Use Zerodha (₹0 account opening, ₹20/trade) or Groww (free). You need this for buying ETFs, REITs, and stocks. Takes 15–30 mins with Aadhaar + PAN.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <h4>Keep ₹20,000 Liquid (Emergency)</h4>
+      <p>Transfer this to a high-interest savings account (Fi Money, Jupiter, or Kotak 811 offer 3–6% on savings). Do NOT invest this.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <h4>Book a 1-Year FD — ₹40,000</h4>
+      <p>Walk into any SBI/HDFC/ICICI branch or do it online via Net Banking. Choose ~7% rate, 1-year tenure. This is your safety buffer.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <h4>Set up SIPs on Groww / Zerodha Coin — ₹10,000/month</h4>
+      <p>Split: ₹4,000 → Nifty 50 Index Fund | ₹3,000 → Flexi Cap Fund | ₹2,000 → Hybrid/BAF | ₹1,000 → Small Cap. Automate the date (e.g., 5th of every month).</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-content">
+      <h4>Buy Gold ETF — ₹30,000 lump sum now</h4>
+      <p>Gold is near all-time highs but the macro environment supports it. Buy Nippon Gold ETF or LIC Gold ETF via your Demat. Set a SIP of ₹1,500/month for the remaining ₹15,000.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-content">
+      <h4>Buy Nifty ETF + 2-3 Stocks — ₹60,000 (staggered)</h4>
+      <p>Don't invest all at once. Buy ₹20,000 now, ₹20,000 next month, ₹20,000 month after. Focus on Nifty BeES + 1–2 banking stocks (now on discount) + 1 pharma stock.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">7</div>
+    <div class="step-content">
+      <h4>Buy REITs — ₹15,000</h4>
+      <p>Embassy REIT or Mindspace REIT from NSE. They're currently corrected. Hold for rental income + appreciation.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">8</div>
+    <div class="step-content">
+      <h4>Review Every 6 Months — Don't Panic Daily</h4>
+      <p>Set reminders for September 2026 and March 2027. Rebalance if any one asset goes above 40% of your portfolio. Ignore daily market noise.</p>
+    </div>
+  </div>
+
+  <div class="tip-box" style="margin-top:6px">
+    <strong>⏱️ Time to set this up:</strong> 1–2 hours total. Everything can be done from your phone. Platforms: Groww, Zerodha, or Angel One.
+  </div>
+  <div class="warning-box" style="margin-top:10px">
+    <strong>⚠️ Disclaimer:</strong> This is general financial information, not personalised advice. Claude is not a SEBI-registered advisor. Please consult a certified financial planner before investing.
+  </div>
+</div>
+
+<script>
+  function show(id){
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.target.classList.add('active');
+  }
+</script>
+</body>
+</html>

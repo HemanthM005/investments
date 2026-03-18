@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>India Emerging Sectors Investment Report 2026</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d2e;
+    --card2: #12151f;
+    --accent1: #4f8ef7;
+    --accent2: #f6c90e;
+    --accent3: #38d39f;
+    --accent4: #e05c5c;
+    --accent5: #b47afc;
+    --text: #e8eaf0;
+    --muted: #8a8fa8;
+    --border: #2a2d3e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.6; }
+
+  nav { background: var(--card2); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; }
+  nav button { background: none; border: 1px solid var(--border); color: var(--muted); padding: 5px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; transition: all .2s; }
+  nav button:hover, nav button.active { background: var(--accent1); border-color: var(--accent1); color: #fff; }
+
+  .header { background: linear-gradient(135deg, #0d1b3e 0%, #1a1d2e 50%, #0f1117 100%); padding: 40px 32px 32px; border-bottom: 1px solid var(--border); }
+  .header h1 { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .header p { color: var(--muted); font-size: 13px; }
+  .header .badge { display: inline-block; background: var(--accent1); color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 12px; margin-top: 8px; }
+
+  .macro { display: flex; gap: 12px; padding: 16px 32px; overflow-x: auto; border-bottom: 1px solid var(--border); background: var(--card2); }
+  .macro-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; min-width: 170px; flex-shrink: 0; }
+  .macro-card .label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .macro-card .value { font-size: 16px; font-weight: 700; }
+  .macro-card .sub { font-size: 11px; color: var(--accent3); margin-top: 2px; }
+  .up { color: var(--accent3); }
+  .warn { color: var(--accent2); }
+
+  main { padding: 24px 32px; max-width: 1200px; margin: 0 auto; }
+  section { display: none; }
+  section.active { display: block; }
+
+  .sector-header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .sector-icon { font-size: 32px; }
+  .sector-header h2 { font-size: 20px; font-weight: 700; }
+  .sector-header p { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .sector-tag { background: #1e2a3a; border: 1px solid var(--accent1); color: var(--accent1); font-size: 11px; padding: 2px 10px; border-radius: 10px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .company-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; transition: border-color .2s; display: flex; flex-direction: column; }
+  .company-card:hover { border-color: var(--accent1); }
+  .company-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .company-name { font-weight: 700; font-size: 15px; }
+  .company-ticker { font-size: 11px; color: var(--accent1); background: #1a2535; padding: 2px 8px; border-radius: 8px; }
+  .company-type { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+  .metrics { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+  .metric { background: var(--card2); border-radius: 8px; padding: 6px 12px; font-size: 11px; }
+  .metric .k { color: var(--muted); display: block; }
+  .metric .v { font-weight: 700; font-size: 13px; }
+  .company-desc { font-size: 12px; color: var(--muted); margin: 10px 0; line-height: 1.5; flex: 1; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tag { font-size: 10px; background: #1e2530; color: var(--accent3); border: 1px solid #1e3a30; padding: 2px 8px; border-radius: 8px; }
+  .tag.risk { color: var(--accent4); border-color: #3a1e1e; background: #251a1a; }
+  .tag.yellow { color: var(--accent2); border-color: #3a3010; background: #251e10; }
+
+  .rating-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .rating-label { font-size: 11px; color: var(--muted); width: 80px; }
+  .bar-bg { flex: 1; background: var(--border); border-radius: 4px; height: 6px; }
+  .bar-fill { height: 6px; border-radius: 4px; }
+  .rating-val { font-size: 11px; font-weight: 700; width: 30px; text-align: right; }
+
+  /* Link buttons */
+  .card-links { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .link-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 5px 12px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: opacity .2s; }
+  .link-btn:hover { opacity: 0.8; }
+  .link-screener { background: #1a2e20; color: #38d39f; border: 1px solid #2a4a30; }
+  .link-moneycontrol { background: #1e2030; color: #7090f0; border: 1px solid #2a3050; }
+  .link-nse { background: #2a1e10; color: #f09030; border: 1px solid #4a3010; }
+
+  .outlook-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  .outlook-table th { text-align: left; color: var(--muted); font-size: 11px; font-weight: 600; padding: 8px 12px; background: var(--card2); border-bottom: 1px solid var(--border); }
+  .outlook-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .outlook-table tr:last-child td { border-bottom: none; }
+  .outlook-table tr:hover td { background: var(--card2); }
+  .outlook-table a { color: var(--accent1); text-decoration: none; font-size: 11px; }
+  .outlook-table a:hover { text-decoration: underline; }
+  .badge-bull { background: #0e3320; color: var(--accent3); padding: 2px 8px; border-radius: 8px; font-size: 10px; }
+  .badge-caut { background: #332d0e; color: var(--accent2); padding: 2px 8px; border-radius: 8px; font-size: 10px; }
+  .badge-risk { background: #331515; color: var(--accent4); padding: 2px 8px; border-radius: 8px; font-size: 10px; }
+
+  .risks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  .risk-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .risk-card h4 { font-size: 12px; color: var(--accent4); margin-bottom: 6px; }
+  .risk-card p { font-size: 11px; color: var(--muted); }
+
+  .summary-box { background: linear-gradient(135deg, #12203a, #0f1a2a); border: 1px solid var(--accent1); border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+  .summary-box h3 { color: var(--accent1); font-size: 14px; margin-bottom: 10px; }
+  .summary-box p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .summary-box ul { padding-left: 16px; }
+  .summary-box li { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+
+  .disclaimer { background: #1a1010; border: 1px solid #3a2020; border-radius: 10px; padding: 14px 18px; margin-top: 28px; font-size: 11px; color: #a07070; }
+
+  @media (max-width: 600px) {
+    main { padding: 16px; }
+    .macro { padding: 12px 16px; }
+    .header { padding: 24px 16px; }
+    .risks { grid-template-columns: 1fr; }
+    nav { padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🇮🇳 India Emerging Sectors — Investment Report</h1>
+  <p>Defence · Solar &amp; Renewables · Electric Vehicles · Green Hydrogen · Space &amp; Deep Tech</p>
+  <span class="badge">Updated: March 2026</span>
+</div>
+
+<div class="macro">
+  <div class="macro-card"><div class="label">Defence Budget FY26</div><div class="value up">₹6.81L Cr</div><div class="sub">+9.5% YoY</div></div>
+  <div class="macro-card"><div class="label">Solar Installed Capacity</div><div class="value up">~119 GW</div><div class="sub">Target: 500 GW by 2030</div></div>
+  <div class="macro-card"><div class="label">EV Sales FY25</div><div class="value up">2M+ Units</div><div class="sub">+50% YoY surge</div></div>
+  <div class="macro-card"><div class="label">Defence Exports</div><div class="value up">₹16,000 Cr</div><div class="sub">All-time high</div></div>
+  <div class="macro-card"><div class="label">Green H₂ Mission Budget</div><div class="value warn">₹19,744 Cr</div><div class="sub">Total outlay</div></div>
+  <div class="macro-card"><div class="label">Nifty India Defence Index</div><div class="value up">+22% (FY25-26)</div><div class="sub">Top stock +51%</div></div>
+</div>
+
+<nav>
+  <button class="active" onclick="showSection('defence',this)">🛡️ Defence</button>
+  <button onclick="showSection('solar',this)">☀️ Solar & Renewables</button>
+  <button onclick="showSection('ev',this)">⚡ Electric Vehicles</button>
+  <button onclick="showSection('hydrogen',this)">💧 Green Hydrogen</button>
+  <button onclick="showSection('deeptech',this)">🚀 Space & Deep Tech</button>
+  <button onclick="showSection('overview',this)">📊 Full Overview</button>
+</nav>
+
+<main>
+
+<!-- ===== DEFENCE ===== -->
+<section id="defence" class="active">
+  <div class="sector-header">
+    <div class="sector-icon">🛡️</div>
+    <div>
+      <h2>Defence Sector <span class="sector-tag">High Conviction</span></h2>
+      <p>Backed by ₹6.81L Cr budget, Atmanirbhar Bharat push, import bans on 400+ items, and surging exports</p>
+    </div>
+  </div>
+  <div class="summary-box">
+    <h3>Sector Overview</h3>
+    <p>India's defence sector targets <strong>$26 billion</strong> in aerospace &amp; defence manufacturing turnover and <strong>₹50,000 Cr in annual exports by 2029</strong>. With import restrictions on 400+ items, domestic manufacturers enjoy a near-captive market and multi-year order books. The Nifty India Defence Index surged <strong>22.29%</strong> from Budget 2025 to Budget 2026, with top stock MTAR up <strong>+51%</strong>.</p>
+  </div>
+
+  <div class="grid">
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Hindustan Aeronautics Ltd</div><div class="company-ticker">HAL</div></div>
+      <div class="company-type">PSU · Aerospace & Fighter Aircraft Manufacturing</div>
+      <div class="company-desc">India's largest aerospace & defence manufacturer. Makes Tejas fighter jets, ALH Dhruv helicopters, Sukhoi-30MKIs, and provides MRO services to all Indian armed forces branches. Order book of ₹1,89,300 Cr as of April 2025.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Order Book</span><span class="v up">₹1,89,300 Cr</span></div>
+        <div class="metric"><span class="k">Key Contracts</span><span class="v">156 LCH Prachand</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:90%;background:#38d39f"></div></div><div class="rating-val up">9/10</div></div>
+      <div class="rating-row"><div class="rating-label">Risk</div><div class="bar-bg"><div class="bar-fill" style="width:25%;background:#f6c90e"></div></div><div class="rating-val warn">Low</div></div>
+      <div class="tags"><span class="tag">Fighter Jets</span><span class="tag">Helicopters</span><span class="tag">MRO</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/HAL/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/defence/hindustanaeronauticslimited/HAL" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=HAL" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Bharat Electronics Ltd</div><div class="company-ticker">BEL</div></div>
+      <div class="company-type">PSU · Defence Electronics & Radar Systems</div>
+      <div class="company-desc">Critical player in India's defence electronics ecosystem. Produces radar systems, fire control, weapon systems, EW, and network-centric solutions. Order book of ₹71,650 Cr represents 3x annual revenue — excellent execution visibility.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Order Book FY25</span><span class="v up">₹71,650 Cr</span></div>
+        <div class="metric"><span class="k">Revenue FY25</span><span class="v">₹23,024 Cr</span></div>
+        <div class="metric"><span class="k">OB Growth</span><span class="v up">+12% YoY</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:85%;background:#38d39f"></div></div><div class="rating-val up">8.5/10</div></div>
+      <div class="rating-row"><div class="rating-label">Stability</div><div class="bar-bg"><div class="bar-fill" style="width:90%;background:#4f8ef7"></div></div><div class="rating-val" style="color:#4f8ef7">9/10</div></div>
+      <div class="tags"><span class="tag">Radar</span><span class="tag">EW Systems</span><span class="tag yellow">3x Revenue</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/BEL/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/defence/bharatelectronicslimited/BEL" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=BEL" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Bharat Dynamics Ltd</div><div class="company-ticker">BDL</div></div>
+      <div class="company-type">PSU · Missiles & Underwater Weapons</div>
+      <div class="company-desc">India's primary manufacturer of guided missiles, torpedoes, and underwater weapons. Key beneficiary of India's push to indigenise missile technology — supplying Akash, Astra, and Helina systems to the armed forces.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Products</span><span class="v">Akash, Astra</span></div>
+        <div class="metric"><span class="k">Govt Support</span><span class="v up">Very High</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:80%;background:#38d39f"></div></div><div class="rating-val up">8/10</div></div>
+      <div class="rating-row"><div class="rating-label">Stability</div><div class="bar-bg"><div class="bar-fill" style="width:82%;background:#4f8ef7"></div></div><div class="rating-val" style="color:#4f8ef7">8/10</div></div>
+      <div class="tags"><span class="tag">Missiles</span><span class="tag">Torpedoes</span><span class="tag">Strategic</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/BDL/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/defence/bharatdynamicslimited/BDL" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=BDL" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Mazagon Dock Shipbuilders</div><div class="company-ticker">MAZDOCK</div></div>
+      <div class="company-type">PSU · Naval Shipbuilding (Submarines & Warships)</div>
+      <div class="company-desc">India's premier shipyard building Scorpene-class submarines and warships for the Indian Navy. With P-17A frigates and future submarine programs in the pipeline, MDL has a multi-decade order visibility. A cornerstone of India's naval expansion.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Specialty</span><span class="v">Submarines</span></div>
+        <div class="metric"><span class="k">Pipeline</span><span class="v up">Multi-decade</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:83%;background:#38d39f"></div></div><div class="rating-val up">8.3/10</div></div>
+      <div class="rating-row"><div class="rating-label">Stability</div><div class="bar-bg"><div class="bar-fill" style="width:85%;background:#4f8ef7"></div></div><div class="rating-val" style="color:#4f8ef7">8.5/10</div></div>
+      <div class="tags"><span class="tag">Submarines</span><span class="tag">Warships</span><span class="tag">Frigates</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/MAZDOCK/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/defence/mazagondockshipbuilderslimited/MDS" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=MAZDOCK" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">MTAR Technologies</div><div class="company-ticker">MTAR</div></div>
+      <div class="company-type">Private · Precision Engineering (Defence, Space, Nuclear)</div>
+      <div class="company-desc">Best-performing defence stock (+51% in FY25-26). Makes precision components for defence, ISRO space missions, and civil nuclear programs. Expanding into clean energy (Bloom Energy USA) and Oil & Gas (Weatherford). Clear multi-year growth roadmap.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Stock Return</span><span class="v up">+51% FY25-26</span></div>
+        <div class="metric"><span class="k">Clients</span><span class="v">ISRO, DRDO, Bloom</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:92%;background:#38d39f"></div></div><div class="rating-val up">9.2/10</div></div>
+      <div class="rating-row"><div class="rating-label">Risk</div><div class="bar-bg"><div class="bar-fill" style="width:50%;background:#e05c5c"></div></div><div class="rating-val" style="color:#e05c5c">Medium</div></div>
+      <div class="tags"><span class="tag">Precision Mfg</span><span class="tag">Space</span><span class="tag yellow">Top Performer</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/MTAR/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/defence/mtartechnologieslimited/MTAR" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=MTAR" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Garden Reach Shipbuilders (GRSE)</div><div class="company-ticker">GRSE</div></div>
+      <div class="company-type">PSU · Naval Shipbuilding (Patrol Vessels, Frigates)</div>
+      <div class="company-desc">+43% gain in FY25-26. Builds patrol vessels, frigates, and survey ships. Revenue +45% YoY and PAT +57% in Q2 FY26. Order book of ₹20,206 Cr with 17% non-defence diversification. NGC corvette award (₹30,000 Cr) expected soon.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Stock Return</span><span class="v up">+43% FY25-26</span></div>
+        <div class="metric"><span class="k">Order Book</span><span class="v up">₹20,206 Cr</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:87%;background:#38d39f"></div></div><div class="rating-val up">8.7/10</div></div>
+      <div class="tags"><span class="tag">Shipbuilding</span><span class="tag">Corvettes</span><span class="tag yellow">+43% Return</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/GRSE/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/defence/gardenreachshipbuilders/GRS" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=GRSE" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Solar Industries India</div><div class="company-ticker">SOLARINDS</div></div>
+      <div class="company-type">Private · Explosives, Ammunition & Defence Propellants</div>
+      <div class="company-desc">India's largest explosives manufacturer and biggest supplier of ammunition to the armed forces. Delivers rockets, propellants, and warheads. Stock rose +27% in FY25-26. Has India's largest cartridge plant in Nagpur with growing export orders.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Stock Return</span><span class="v up">+27% FY25-26</span></div>
+        <div class="metric"><span class="k">Niche</span><span class="v">Largest in India</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:82%;background:#38d39f"></div></div><div class="rating-val up">8.2/10</div></div>
+      <div class="tags"><span class="tag">Ammunition</span><span class="tag">Explosives</span><span class="tag">Rockets</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/SOLARINDS/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/chemicals/solarindustriesindia/SII" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=SOLARINDS" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Data Patterns (India)</div><div class="company-ticker">DATAPATT</div></div>
+      <div class="company-type">Private · Defence Electronics (Radar, Avionics, Space)</div>
+      <div class="company-desc">Specialised in mission-critical defence electronics for aerospace, naval, and communication systems. Supplies DRDO, HAL, and ISRO. Strong R&D, higher content-per-platform model, and growing demand for radar/avionics make it a key mid-cap play.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Clients</span><span class="v">DRDO, HAL, ISRO</span></div>
+        <div class="metric"><span class="k">Type</span><span class="v">Mid-cap Private</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:85%;background:#38d39f"></div></div><div class="rating-val up">8.5/10</div></div>
+      <div class="rating-row"><div class="rating-label">Risk</div><div class="bar-bg"><div class="bar-fill" style="width:50%;background:#f6c90e"></div></div><div class="rating-val warn">Medium</div></div>
+      <div class="tags"><span class="tag">Defence Electronics</span><span class="tag">DRDO</span><span class="tag">Space</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/DATAPATT/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/defence/datapatternsindia/DATAP" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=DATAPATT" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Paras Defence & Space</div><div class="company-ticker">PARAS</div></div>
+      <div class="company-type">Private · Drones, Optics, Space & Satellite Systems</div>
+      <div class="company-desc">One of the few Indian private companies in defence drones, space equipment, and high-tech optics. Works on electro-optics, surveillance drones, and satellite systems. High growth runway but small-cap with volatility. High conviction only for long-term investors.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Focus</span><span class="v">Drones + Optics</span></div>
+        <div class="metric"><span class="k">Upside</span><span class="v up">Very High</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:88%;background:#38d39f"></div></div><div class="rating-val up">8.8/10</div></div>
+      <div class="rating-row"><div class="rating-label">Risk</div><div class="bar-bg"><div class="bar-fill" style="width:70%;background:#e05c5c"></div></div><div class="rating-val" style="color:#e05c5c">High</div></div>
+      <div class="tags"><span class="tag">Drones</span><span class="tag">Space Optics</span><span class="tag risk">Volatile</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/PARAS/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/defence/parasdefencespacetech/PDST" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=PARAS" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+  </div>
+  <div class="risks">
+    <div class="risk-card"><h4>⚠ Key Risks</h4><p>Heavy dependence on government procurement cycles; long project gestation periods; policy/budget changes; delays in order execution; limited pricing flexibility vs. single buyer (GoI).</p></div>
+    <div class="risk-card"><h4>✅ Key Catalysts</h4><p>₹6.81L Cr defence budget (+9.5%); import ban on 400+ items; $26B turnover target; ₹50,000 Cr export goal by 2029; AI, drones & cyber defence expansion; global partnerships (France, Israel, Russia).</p></div>
+  </div>
+</section>
+
+<!-- ===== SOLAR ===== -->
+<section id="solar">
+  <div class="sector-header">
+    <div class="sector-icon">☀️</div>
+    <div>
+      <h2>Solar & Renewables <span class="sector-tag">Structural Growth</span></h2>
+      <p>India targets 500 GW non-fossil capacity by 2030 · Solar market CAGR ~40% to ~$238B by 2030</p>
+    </div>
+  </div>
+  <div class="summary-box">
+    <h3>Sector Overview</h3>
+    <p>India's solar capacity has crossed <strong>119 GW</strong> (July 2025), up from just 3 GW in 2014. Module manufacturing capacity nearly doubled to <strong>74 GW</strong> in a single year. PLI schemes, PM Surya Ghar Yojana, and ALMM rules (mandating domestic cells from 2026) are creating massive domestic demand tailwinds.</p>
+  </div>
+
+  <div class="grid">
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Waaree Energies</div><div class="company-ticker">WAAREEENR</div></div>
+      <div class="company-type">Private · Solar Module Manufacturing (Largest in India)</div>
+      <div class="company-desc">India's largest solar module manufacturer with 12 GW production capacity across four advanced facilities. Strong beneficiary of ALMM rules requiring certified domestic modules for government projects. Growing international market exposure.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Capacity</span><span class="v up">12 GW Modules</span></div>
+        <div class="metric"><span class="k">Plants</span><span class="v">4 Facilities</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:90%;background:#f6c90e"></div></div><div class="rating-val warn">9/10</div></div>
+      <div class="tags"><span class="tag">Module Mfg</span><span class="tag">ALMM</span><span class="tag yellow">Market Leader</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/WAAREEENR/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/power/waareeenergies/WE" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=WAAREEENR" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Adani Green Energy</div><div class="company-ticker">ADANIGREEN</div></div>
+      <div class="company-type">Adani Group · Large-Scale Solar & Wind Generation</div>
+      <div class="company-desc">India's largest renewable energy developer. Operational capacity grew 30% YoY to 14,243 MW in FY25. Building the world's largest renewable park at Khavda, Gujarat (538 sq km, targeting 30 GW). Note: Governance concerns following Nov 2025 U.S. indictment — monitor closely.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Op. Capacity</span><span class="v up">14,243 MW</span></div>
+        <div class="metric"><span class="k">YoY Capacity</span><span class="v up">+30%</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:88%;background:#f6c90e"></div></div><div class="rating-val warn">8.8/10</div></div>
+      <div class="rating-row"><div class="rating-label">Risk</div><div class="bar-bg"><div class="bar-fill" style="width:65%;background:#e05c5c"></div></div><div class="rating-val" style="color:#e05c5c">Med-High</div></div>
+      <div class="tags"><span class="tag">Utility Solar</span><span class="tag">Wind</span><span class="tag risk">Governance Risk</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/ADANIGREEN/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/power/adanigreenenergyltd/AGE" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=ADANIGREEN" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Tata Power</div><div class="company-ticker">TATAPOWER</div></div>
+      <div class="company-type">Tata Group · Integrated Power (Solar, Wind, EV Charging)</div>
+      <div class="company-desc">India's most trusted energy brand with 10 GW+ renewable capacity. Growing in rooftop solar, utility-scale projects, and EV charging. 3-year stock return of 70%+. Tata's governance track record makes it the most reliable renewable pick for conservative investors.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Renewable Cap</span><span class="v up">10 GW+</span></div>
+        <div class="metric"><span class="k">3-yr Return</span><span class="v up">~70%</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:80%;background:#f6c90e"></div></div><div class="rating-val warn">8/10</div></div>
+      <div class="rating-row"><div class="rating-label">Stability</div><div class="bar-bg"><div class="bar-fill" style="width:90%;background:#38d39f"></div></div><div class="rating-val up">9/10</div></div>
+      <div class="tags"><span class="tag">Rooftop Solar</span><span class="tag">EV Charging</span><span class="tag yellow">Tata Safety</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/TATAPOWER/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/power/tatapower/TPC" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=TATAPOWER" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Premier Energies</div><div class="company-ticker">PREMIENRG</div></div>
+      <div class="company-type">Private · Solar Cell & Module Manufacturing (TOPCon)</div>
+      <div class="company-desc">Early mover in n-type TOPCon cell technology. FY25 capacity: 5.1 GW modules + 3.2 GW cells. "Mission 2028" targets ₹125 Bn capex for 10 GW fully integrated value chain. JV with Taiwan's SAS for 2 GW wafer plant by June 2026.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Module Cap FY25</span><span class="v up">5.1 GW</span></div>
+        <div class="metric"><span class="k">Mission 2028</span><span class="v up">10 GW target</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:93%;background:#f6c90e"></div></div><div class="rating-val warn">9.3/10</div></div>
+      <div class="tags"><span class="tag">TOPCon Tech</span><span class="tag">Integrated Mfg</span><span class="tag yellow">High Growth</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/PREMIENRG/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/power/premierenergies/PE" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=PREMIENRG" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">NTPC Green Energy</div><div class="company-ticker">NTPCGREEN</div></div>
+      <div class="company-type">PSU · Utility-Scale Solar & Wind (NTPC Subsidiary)</div>
+      <div class="company-desc">NTPC's dedicated renewable arm with ~2,900 MW commercial capacity. Operates large solar projects in Rajgarh, Bhadla, Fatehgarh, and more. Backed by NTPC's balance sheet and the government's renewable energy mandate. Strong pipeline of new projects.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Operational Cap</span><span class="v up">~2,900 MW</span></div>
+        <div class="metric"><span class="k">Parent</span><span class="v">NTPC (PSU)</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Stability</div><div class="bar-bg"><div class="bar-fill" style="width:88%;background:#38d39f"></div></div><div class="rating-val up">8.8/10</div></div>
+      <div class="tags"><span class="tag">PSU-Backed</span><span class="tag">Utility Scale</span><span class="tag">Low Risk</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/NTPCGREEN/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/power/ntpcgreenenergyltd/NGE" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=NTPCGREEN" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Suzlon Energy</div><div class="company-ticker">SUZLON</div></div>
+      <div class="company-type">Private · Wind & Solar Hybrid Energy</div>
+      <div class="company-desc">Dominant wind energy player expanding into solar hybrids. 21 GW installed across 17 countries. Net sales rose 73.2% YoY in Q4 FY25. Registered 1,500 MW wind-solar hybrid park in Rajasthan. A powerful turnaround story with recovering fundamentals.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Installed Base</span><span class="v up">21 GW Wind</span></div>
+        <div class="metric"><span class="k">Q4 FY25 Sales</span><span class="v up">+73.2% YoY</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:82%;background:#f6c90e"></div></div><div class="rating-val warn">8.2/10</div></div>
+      <div class="tags"><span class="tag">Wind Leader</span><span class="tag">Hybrid Parks</span><span class="tag yellow">Turnaround</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/SUZLON/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/power/suzlonenergy/SE" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=SUZLON" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+  </div>
+  <div class="risks">
+    <div class="risk-card"><h4>⚠ Key Risks</h4><p>Commodity price swings (polysilicon, glass); import-dependent supply chain; interest rate sensitivity for large capital projects; policy changes on subsidies; Chinese manufacturer competition.</p></div>
+    <div class="risk-card"><h4>✅ Key Catalysts</h4><p>500 GW target by 2030; PM Surya Ghar Yojana; PLI for solar PV modules; ALMM domestic sourcing mandate (2026 onwards); India's 748 GW solar potential; $238B market by 2030.</p></div>
+  </div>
+</section>
+
+<!-- ===== EV ===== -->
+<section id="ev">
+  <div class="sector-header">
+    <div class="sector-icon">⚡</div>
+    <div>
+      <h2>Electric Vehicles <span class="sector-tag">Hyper Growth</span></h2>
+      <p>India EV market growing at 40.7% CAGR · Target: 30% EV penetration by 2030 · $34.8B market in 2024</p>
+    </div>
+  </div>
+  <div class="summary-box">
+    <h3>Sector Overview</h3>
+    <p>India sold over <strong>2 million EVs in FY25</strong> — an 11.5x increase over FY20. EVs now represent 8% of all automobile sales. Two-wheelers lead (50%+), followed by three-wheelers (36%). The government's <strong>PM E-DRIVE scheme (₹4,000 Cr)</strong> and PLI for autos are accelerating the ecosystem. Market projected at <strong>$113.99 billion by 2029</strong> at 66.52% CAGR.</p>
+  </div>
+
+  <div class="grid">
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Tata Motors</div><div class="company-ticker">TATAMOTORS</div></div>
+      <div class="company-type">Tata Group · EV Passenger Cars & Buses (Market Leader)</div>
+      <div class="company-desc">Undisputed leader in India's electric 4-wheeler segment with 50%+ market share in FY25. Portfolio: Nexon EV, Tigor EV, and 10 new EV models planned by FY26. Major player in electric buses. EV mix target: 25-30% by FY25, 50% by FY30.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">EV Market Share</span><span class="v up">>50% (4W)</span></div>
+        <div class="metric"><span class="k">New Models</span><span class="v up">10 by FY26</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Market Lead</div><div class="bar-bg"><div class="bar-fill" style="width:90%;background:#b47afc"></div></div><div class="rating-val" style="color:#b47afc">9/10</div></div>
+      <div class="tags"><span class="tag">Nexon EV</span><span class="tag">E-Buses</span><span class="tag yellow">Dominant Player</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/TATAMOTORS/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/automobiles/tatamotors/TM" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=TATAMOTORS" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Mahindra & Mahindra</div><div class="company-ticker">M&M</div></div>
+      <div class="company-type">M&M Group · Electric SUVs, 3-Wheelers & Last-Mile</div>
+      <div class="company-desc">Rapidly expanding EV lineup in electric SUVs and last-mile mobility. Market leader in electric 3-wheelers. ROE of 20.11% and ROCE of 14.88%. Strong global presence in North America, Italy, Japan, and South Korea with EV R&D centres.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">ROE</span><span class="v up">20.11%</span></div>
+        <div class="metric"><span class="k">ROCE</span><span class="v up">14.88%</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:85%;background:#b47afc"></div></div><div class="rating-val" style="color:#b47afc">8.5/10</div></div>
+      <div class="rating-row"><div class="rating-label">Stability</div><div class="bar-bg"><div class="bar-fill" style="width:88%;background:#38d39f"></div></div><div class="rating-val up">8.8/10</div></div>
+      <div class="tags"><span class="tag">Electric SUVs</span><span class="tag">3-Wheelers</span><span class="tag">Global</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/M&M/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/automobiles/mahindramahindra/MM" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=M%26M" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Bajaj Auto</div><div class="company-ticker">BAJAJ-AUTO</div></div>
+      <div class="company-type">Private · Electric 2-Wheelers & Auto-Rickshaws</div>
+      <div class="company-desc">Financially strongest EV play — debt-equity ratio of just 0.07, PAT growth 27.19% (FY24), ROE 26.51%, ROCE 33.47%. Leveraging strong dealer network for electric scooters and auto-rickshaws. Among the safest investments in the entire EV space.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Debt/Equity</span><span class="v up">0.07</span></div>
+        <div class="metric"><span class="k">ROCE</span><span class="v up">33.47%</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Financials</div><div class="bar-bg"><div class="bar-fill" style="width:93%;background:#b47afc"></div></div><div class="rating-val" style="color:#b47afc">9.3/10</div></div>
+      <div class="rating-row"><div class="rating-label">Risk</div><div class="bar-bg"><div class="bar-fill" style="width:22%;background:#38d39f"></div></div><div class="rating-val up">Very Low</div></div>
+      <div class="tags"><span class="tag">EV 2W</span><span class="tag">Auto-Rickshaw</span><span class="tag yellow">Best Financials</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/BAJAJ-AUTO/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/automobiles/bajajauto/BA" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=BAJAJ-AUTO" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Amara Raja Energy & Mobility</div><div class="company-ticker">AMARAJABAT</div></div>
+      <div class="company-type">Private · EV Batteries, Fast Chargers & Energy Solutions</div>
+      <div class="company-desc">Pure-play EV battery and charging infrastructure company. Makes battery packs for electric 3W and 2W, plus AC/DC fast chargers. PAT growth of 27.85% (FY24), ROCE of 19.81%. Key beneficiary of India's charging infrastructure buildout.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">PAT Growth FY24</span><span class="v up">+27.85%</span></div>
+        <div class="metric"><span class="k">ROCE</span><span class="v up">19.81%</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:82%;background:#b47afc"></div></div><div class="rating-val" style="color:#b47afc">8.2/10</div></div>
+      <div class="tags"><span class="tag">EV Batteries</span><span class="tag">Fast Chargers</span><span class="tag">Infra Play</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/AMARAJABAT/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/batteries/amararajabatteries/ARB" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=AMARAJABAT" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">JBM Auto</div><div class="company-ticker">JBMA</div></div>
+      <div class="company-type">Private · Commercial Electric Vehicles (Buses & Trucks)</div>
+      <div class="company-desc">One of the few companies exclusively focused on commercial electric vehicles, particularly e-buses. Strong government and State Transport partnerships. Pure-play commercial EV bet with massive demand from India's public transport electrification drive.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Focus</span><span class="v">E-Buses</span></div>
+        <div class="metric"><span class="k">Clients</span><span class="v up">State Transport</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:85%;background:#b47afc"></div></div><div class="rating-val" style="color:#b47afc">8.5/10</div></div>
+      <div class="tags"><span class="tag">E-Buses</span><span class="tag">Commercial EV</span><span class="tag yellow">Pure-Play</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/JBMA/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/automobiles/jbmauto/JBMA" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=JBMA" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Ashok Leyland</div><div class="company-ticker">ASHOKLEY</div></div>
+      <div class="company-type">Hinduja Group · Commercial Vehicles & Electric Trucks/Buses</div>
+      <div class="company-desc">Traditional CV leader carving a niche in electric buses and trucks. Strong presence in public transport electrification with established government procurement relationships and a pan-India service network stretching back decades.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Focus</span><span class="v">E-Buses & Trucks</span></div>
+        <div class="metric"><span class="k">Network</span><span class="v up">Pan-India</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:75%;background:#b47afc"></div></div><div class="rating-val" style="color:#b47afc">7.5/10</div></div>
+      <div class="tags"><span class="tag">E-Trucks</span><span class="tag">E-Buses</span><span class="tag">Public Transit</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/ASHOKLEY/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/automobiles/ashokleyland/AL" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=ASHOKLEY" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+  </div>
+  <div class="risks">
+    <div class="risk-card"><h4>⚠ Key Risks</h4><p>Battery technology disruption; consumer adoption slower than targets; charging infra gaps; semiconductor shortages; competitive pressure from Chinese OEMs; policy reversals on subsidies.</p></div>
+    <div class="risk-card"><h4>✅ Key Catalysts</h4><p>PM E-DRIVE (₹4,000 Cr); PLI for autos; 30% EV penetration target by 2030; $113.99B market by 2029; falling battery costs; 7,432 charging stations approved; 8% EV share in Q1 2025.</p></div>
+  </div>
+</section>
+
+<!-- ===== HYDROGEN ===== -->
+<section id="hydrogen">
+  <div class="sector-header">
+    <div class="sector-icon">💧</div>
+    <div>
+      <h2>Green Hydrogen <span class="sector-tag">Early Stage / High Potential</span></h2>
+      <p>National Green Hydrogen Mission · ₹19,744 Cr total outlay · Target 5 MT/year by 2030</p>
+    </div>
+  </div>
+  <div class="summary-box">
+    <h3>Sector Overview</h3>
+    <p>India's National Green Hydrogen Mission targets <strong>5 million MT annually by 2030</strong>, potentially reducing fossil fuel imports by ₹1 lakh Cr. Budget 2025-26 doubled annual allocation to <strong>₹600 Cr</strong>. 2026 is the key execution-entry year for this space — still early-stage but enormous long-term potential.</p>
+  </div>
+
+  <div class="grid">
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Reliance Industries</div><div class="company-ticker">RELIANCE</div></div>
+      <div class="company-type">Private · New Energy: Green Hydrogen, Solar & Batteries</div>
+      <div class="company-desc">Entering green hydrogen aggressively as part of its New Energy business with Jamnagar as the hub. With massive capital allocation, technology partnerships, and diversified business lines (Jio, Retail), Reliance is the safest "big bet" on India's hydrogen future.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Hub</span><span class="v">Jamnagar</span></div>
+        <div class="metric"><span class="k">Risk Profile</span><span class="v up">Low (Diversified)</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Long-term</div><div class="bar-bg"><div class="bar-fill" style="width:90%;background:#38d39f"></div></div><div class="rating-val up">9/10</div></div>
+      <div class="tags"><span class="tag">Green H₂</span><span class="tag">New Energy</span><span class="tag yellow">Safest Large Bet</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/RELIANCE/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/refineries/relianceindustries/RI" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=RELIANCE" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">NTPC</div><div class="company-ticker">NTPC</div></div>
+      <div class="company-type">PSU · Green Hydrogen Pilot + Renewable Power</div>
+      <div class="company-desc">Piloting hydrogen fuel projects and integrating green hydrogen into its renewable portfolio. FY25 net profit: ₹23,953 Cr (+22% YoY). PSU safety with renewable + hydrogen upside — one of the best risk-adjusted bets across all emerging themes.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">PAT FY25</span><span class="v up">₹23,953 Cr</span></div>
+        <div class="metric"><span class="k">Q4 PAT Growth</span><span class="v up">+22% YoY</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Stability</div><div class="bar-bg"><div class="bar-fill" style="width:93%;background:#38d39f"></div></div><div class="rating-val up">9.3/10</div></div>
+      <div class="tags"><span class="tag">H₂ Pilots</span><span class="tag">PSU Safety</span><span class="tag">Dividends</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/NTPC/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/power/ntpc/NTPC" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=NTPC" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Adani Enterprises</div><div class="company-ticker">ADANIENT</div></div>
+      <div class="company-type">Adani Group · Green Hydrogen & New Energy Incubator</div>
+      <div class="company-desc">Group incubator for green hydrogen, solar manufacturing, airports, and roads. Khavda renewable park is the anchor. High growth potential but carries Adani group governance risk premium. Best approached at corrected valuations with a long-term horizon.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Focus</span><span class="v">Green H₂ + Solar</span></div>
+        <div class="metric"><span class="k">Upside</span><span class="v up">Very High</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Risk</div><div class="bar-bg"><div class="bar-fill" style="width:70%;background:#e05c5c"></div></div><div class="rating-val" style="color:#e05c5c">High</div></div>
+      <div class="tags"><span class="tag">Green H₂</span><span class="tag">Incubator</span><span class="tag risk">Monitor Closely</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/ADANIENT/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/misc/adanienterprises/ADE" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=ADANIENT" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Power Grid Corp of India</div><div class="company-ticker">POWERGRID</div></div>
+      <div class="company-type">PSU · Transmission Infrastructure for Renewables & H₂</div>
+      <div class="company-desc">Manages India's national power transmission network and is building dedicated renewable energy corridors. A highly stable, dividend-paying indirect beneficiary of both solar and green hydrogen infrastructure growth. Predictable revenue from regulated tariffs.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Role</span><span class="v">Grid Transmission</span></div>
+        <div class="metric"><span class="k">Revenue</span><span class="v up">Predictable</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Stability</div><div class="bar-bg"><div class="bar-fill" style="width:94%;background:#38d39f"></div></div><div class="rating-val up">9.4/10</div></div>
+      <div class="tags"><span class="tag">Transmission</span><span class="tag">Indirect Play</span><span class="tag yellow">Safe Dividend</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/POWERGRID/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/power/powergridcorporationofindia/PG" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=POWERGRID" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+  </div>
+  <div class="risks">
+    <div class="risk-card"><h4>⚠ Key Risks</h4><p>High production costs; limited storage & distribution infrastructure; long payback periods; competition from cheap fossil fuels; electrolyzer technology not yet commercially scaled.</p></div>
+    <div class="risk-card"><h4>✅ Key Catalysts</h4><p>National Green Hydrogen Mission (₹19,744 Cr total); 5 MT/year target by 2030; ₹1 lakh Cr fossil fuel import reduction; 2026 execution phase starting; global export potential; improving electrolyzer costs.</p></div>
+  </div>
+</section>
+
+<!-- ===== DEEP TECH ===== -->
+<section id="deeptech">
+  <div class="sector-header">
+    <div class="sector-icon">🚀</div>
+    <div>
+      <h2>Space & Deep Tech <span class="sector-tag">Frontier Growth</span></h2>
+      <p>ISRO private sector opening · Semiconductor PLI · Drone warfare demand · AI infrastructure boom</p>
+    </div>
+  </div>
+  <div class="summary-box">
+    <h3>Sector Overview</h3>
+    <p>India's space sector is now liberalised for private players post-ISRO reform. Semiconductor PLI is attracting global manufacturers. Drone warfare demand has exploded. These sectors offer the <strong>highest upside potential</strong> but require a long-term investment horizon and tolerance for higher volatility.</p>
+  </div>
+
+  <div class="grid">
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">MTAR Technologies</div><div class="company-ticker">MTAR</div></div>
+      <div class="company-type">Private · Precision Mfg for Aerospace, Nuclear & Space</div>
+      <div class="company-desc">India's only listed precision parts supplier to ISRO, DRDO, Bloom Energy (USA), and the nuclear energy sector. Best-performing defence+space stock in FY25-26 (+51%). New Hyderabad facility and Oil & Gas diversification (Weatherford) add further revenue legs.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Clients</span><span class="v">ISRO, DRDO, Bloom</span></div>
+        <div class="metric"><span class="k">Stock Return</span><span class="v up">+51% FY25-26</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:93%;background:#b47afc"></div></div><div class="rating-val" style="color:#b47afc">9.3/10</div></div>
+      <div class="tags"><span class="tag">Space</span><span class="tag">Nuclear</span><span class="tag yellow">Top Performer</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/MTAR/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/defence/mtartechnologieslimited/MTAR" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=MTAR" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Paras Defence & Space</div><div class="company-ticker">PARAS</div></div>
+      <div class="company-type">Private · Drones, Space Optics & Satellite Systems</div>
+      <div class="company-desc">Unique private-sector position in both defence drones and space technology. Focus on electro-optics, surveillance drones, and satellite systems. High growth runway as India's space sector opens up and demand for surveillance drones rises. Expect high volatility.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Focus</span><span class="v">Optics + Drones</span></div>
+        <div class="metric"><span class="k">Upside</span><span class="v up">Very High</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:90%;background:#b47afc"></div></div><div class="rating-val" style="color:#b47afc">9/10</div></div>
+      <div class="rating-row"><div class="rating-label">Risk</div><div class="bar-bg"><div class="bar-fill" style="width:72%;background:#e05c5c"></div></div><div class="rating-val" style="color:#e05c5c">High</div></div>
+      <div class="tags"><span class="tag">Space Optics</span><span class="tag">Drones</span><span class="tag risk">Volatile</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/PARAS/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/defence/parasdefencespacetech/PDST" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=PARAS" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Zen Technologies</div><div class="company-ticker">ZENTEC</div></div>
+      <div class="company-type">Private · Combat Training Simulators & Anti-Drone Systems</div>
+      <div class="company-desc">Niche leader in defence simulators for combat training and counter-drone (C-UAS) technology — both extremely high-demand areas following recent conflicts globally. As India modernises training infrastructure and drone threats grow, Zen is a compelling pure-play.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Niche</span><span class="v">Simulators</span></div>
+        <div class="metric"><span class="k">New Area</span><span class="v up">Anti-Drone</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:85%;background:#b47afc"></div></div><div class="rating-val" style="color:#b47afc">8.5/10</div></div>
+      <div class="tags"><span class="tag">Simulators</span><span class="tag">Anti-Drone</span><span class="tag yellow">Niche Leader</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/ZENTEC/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/defence/zentechnologies/ZT" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=ZENTEC" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+    <div class="company-card">
+      <div class="company-top"><div class="company-name">Astra Microwave Products</div><div class="company-ticker">ASTRAMICRO</div></div>
+      <div class="company-type">Private · RF & Microwave Components (Radar, Space, EW)</div>
+      <div class="company-desc">Specialises in RF/microwave sub-systems used in defence, space, and missile programs. Gained ~25% in FY25-26 (top 5 Nifty Defence performer). Beneficiary of India's radar modernisation and growing ISRO launch cadence as private space grows.</div>
+      <div class="metrics">
+        <div class="metric"><span class="k">Stock Return</span><span class="v up">~25% FY25-26</span></div>
+        <div class="metric"><span class="k">Clients</span><span class="v">DRDO, ISRO</span></div>
+      </div>
+      <div class="rating-row"><div class="rating-label">Growth</div><div class="bar-bg"><div class="bar-fill" style="width:80%;background:#b47afc"></div></div><div class="rating-val" style="color:#b47afc">8/10</div></div>
+      <div class="tags"><span class="tag">RF/Microwave</span><span class="tag">Radar Tech</span><span class="tag">Space</span></div>
+      <div class="card-links">
+        <a class="link-btn link-screener" href="https://www.screener.in/company/ASTRAMICRO/" target="_blank">📊 Screener</a>
+        <a class="link-btn link-moneycontrol" href="https://www.moneycontrol.com/india/stockpricequote/defence/astramicrowaveproducts/AMP" target="_blank">📈 Moneycontrol</a>
+        <a class="link-btn link-nse" href="https://www.nseindia.com/get-quotes/equity?symbol=ASTRAMICRO" target="_blank">🏦 NSE</a>
+      </div>
+    </div>
+
+  </div>
+  <div class="risks">
+    <div class="risk-card"><h4>⚠ Key Risks</h4><p>Small-cap volatility; concentrated client base; long order cycles; technology disruption; limited liquidity; global competition in semiconductors & space; regulatory changes in ISRO policies.</p></div>
+    <div class="risk-card"><h4>✅ Key Catalysts</h4><p>ISRO private sector opening; Semiconductor PLI; India's drone warfare demand; AI adoption; space startup funding; global partnerships in defence tech; anti-drone market boom post-Ukraine conflict.</p></div>
+  </div>
+</section>
+
+<!-- ===== OVERVIEW ===== -->
+<section id="overview">
+  <div class="sector-header">
+    <div class="sector-icon">📊</div>
+    <div>
+      <h2>Full Portfolio Overview <span class="sector-tag">Master Comparison</span></h2>
+      <p>All 20 companies at a glance — click any company name to go directly to Screener.in</p>
+    </div>
+  </div>
+
+  <div style="overflow-x:auto;margin-bottom:24px">
+  <table class="outlook-table" style="background:var(--card);border-radius:12px;overflow:hidden">
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>Sector</th>
+        <th>Growth</th>
+        <th>Risk</th>
+        <th>Horizon</th>
+        <th>Outlook</th>
+        <th>Quick Links</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><a href="https://www.screener.in/company/HAL/" target="_blank"><strong>HAL</strong></a></td><td>Defence</td><td>★★★★★</td><td><span class="badge-bull">Low</span></td><td>3-7 yrs</td><td><span class="badge-bull">Bullish</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=HAL" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/BEL/" target="_blank"><strong>BEL</strong></a></td><td>Defence Electronics</td><td>★★★★★</td><td><span class="badge-bull">Low</span></td><td>3-7 yrs</td><td><span class="badge-bull">Bullish</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=BEL" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/MTAR/" target="_blank"><strong>MTAR Technologies</strong></a></td><td>Defence/Space/Nuclear</td><td>★★★★★</td><td><span class="badge-caut">Medium</span></td><td>3-5 yrs</td><td><span class="badge-bull">Strong Buy</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=MTAR" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/GRSE/" target="_blank"><strong>GRSE</strong></a></td><td>Naval Shipbuilding</td><td>★★★★☆</td><td><span class="badge-bull">Low</span></td><td>3-7 yrs</td><td><span class="badge-bull">Bullish</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=GRSE" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/PARAS/" target="_blank"><strong>Paras Defence</strong></a></td><td>Drones/Space</td><td>★★★★★</td><td><span class="badge-risk">High</span></td><td>5-10 yrs</td><td><span class="badge-caut">Speculative</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=PARAS" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/MAZDOCK/" target="_blank"><strong>Mazagon Dock</strong></a></td><td>Naval Shipbuilding</td><td>★★★★☆</td><td><span class="badge-bull">Low</span></td><td>5-10 yrs</td><td><span class="badge-bull">Bullish</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=MAZDOCK" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/BDL/" target="_blank"><strong>BDL</strong></a></td><td>Missiles</td><td>★★★★☆</td><td><span class="badge-bull">Low</span></td><td>5-10 yrs</td><td><span class="badge-bull">Bullish</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=BDL" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/WAAREEENR/" target="_blank"><strong>Waaree Energies</strong></a></td><td>Solar Manufacturing</td><td>★★★★★</td><td><span class="badge-caut">Medium</span></td><td>3-5 yrs</td><td><span class="badge-bull">Bullish</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=WAAREEENR" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/PREMIENRG/" target="_blank"><strong>Premier Energies</strong></a></td><td>Solar Mfg (TOPCon)</td><td>★★★★★</td><td><span class="badge-caut">Medium</span></td><td>3-5 yrs</td><td><span class="badge-bull">Strong Buy</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=PREMIENRG" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/TATAPOWER/" target="_blank"><strong>Tata Power</strong></a></td><td>Solar/Wind/EV Charging</td><td>★★★★☆</td><td><span class="badge-bull">Low</span></td><td>3-7 yrs</td><td><span class="badge-bull">Bullish</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=TATAPOWER" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/ADANIGREEN/" target="_blank"><strong>Adani Green Energy</strong></a></td><td>Solar/Wind</td><td>★★★★★</td><td><span class="badge-risk">High</span></td><td>5-10 yrs</td><td><span class="badge-caut">Caution</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=ADANIGREEN" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/SUZLON/" target="_blank"><strong>Suzlon Energy</strong></a></td><td>Wind/Hybrid</td><td>★★★★☆</td><td><span class="badge-caut">Medium</span></td><td>3-5 yrs</td><td><span class="badge-bull">Bullish</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=SUZLON" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/NTPCGREEN/" target="_blank"><strong>NTPC Green</strong></a></td><td>Utility Solar/H₂</td><td>★★★☆☆</td><td><span class="badge-bull">Low</span></td><td>5-10 yrs</td><td><span class="badge-bull">Stable</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=NTPCGREEN" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/TATAMOTORS/" target="_blank"><strong>Tata Motors</strong></a></td><td>EV (4W, Buses)</td><td>★★★★★</td><td><span class="badge-caut">Medium</span></td><td>3-7 yrs</td><td><span class="badge-bull">Bullish</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=TATAMOTORS" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/M&M/" target="_blank"><strong>Mahindra & Mahindra</strong></a></td><td>EV (SUV, 3W)</td><td>★★★★☆</td><td><span class="badge-bull">Low</span></td><td>3-7 yrs</td><td><span class="badge-bull">Bullish</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=M%26M" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/BAJAJ-AUTO/" target="_blank"><strong>Bajaj Auto</strong></a></td><td>EV (2W)</td><td>★★★★☆</td><td><span class="badge-bull">Very Low</span></td><td>3-5 yrs</td><td><span class="badge-bull">Strong Buy</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=BAJAJ-AUTO" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/AMARAJABAT/" target="_blank"><strong>Amara Raja Energy</strong></a></td><td>EV Batteries</td><td>★★★★☆</td><td><span class="badge-caut">Medium</span></td><td>3-7 yrs</td><td><span class="badge-bull">Bullish</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=AMARAJABAT" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/RELIANCE/" target="_blank"><strong>Reliance Industries</strong></a></td><td>Green H₂/New Energy</td><td>★★★★★</td><td><span class="badge-bull">Low</span></td><td>5-10 yrs</td><td><span class="badge-bull">Strong Buy</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=RELIANCE" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/POWERGRID/" target="_blank"><strong>Power Grid Corp</strong></a></td><td>Transmission/Infra</td><td>★★★☆☆</td><td><span class="badge-bull">Very Low</span></td><td>5-10 yrs</td><td><span class="badge-bull">Stable Income</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=POWERGRID" target="_blank">NSE ↗</a></td></tr>
+      <tr><td><a href="https://www.screener.in/company/ZENTEC/" target="_blank"><strong>Zen Technologies</strong></a></td><td>Simulators/Anti-Drone</td><td>★★★★★</td><td><span class="badge-caut">Medium</span></td><td>3-5 yrs</td><td><span class="badge-bull">Bullish</span></td><td><a href="https://www.nseindia.com/get-quotes/equity?symbol=ZENTEC" target="_blank">NSE ↗</a></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="summary-box" style="border-color:var(--accent3)">
+    <h3 style="color:var(--accent3)">🎯 Suggested Portfolio Allocation Approach</h3>
+    <ul>
+      <li><strong>Core (40-50%):</strong> HAL, BEL, Tata Power, Bajaj Auto, NTPC/NTPC Green, Power Grid — low risk, proven performers</li>
+      <li><strong>Growth (30-35%):</strong> MTAR Technologies, Waaree Energies, Premier Energies, Tata Motors, M&M, GRSE — higher returns with manageable risk</li>
+      <li><strong>Speculative/High Upside (15-20%):</strong> Paras Defence, Zen Technologies, Amara Raja, Data Patterns — high potential, be prepared for volatility</li>
+      <li><strong>Macro Hedge:</strong> Reliance Industries spans green hydrogen, telecom, and retail — provides diversification across India's future themes</li>
+    </ul>
+  </div>
+
+  <div class="disclaimer">
+    ⚠ <strong>Disclaimer:</strong> This report is for informational and educational purposes only. It is NOT financial advice or a recommendation to buy or sell any securities. Past performance does not guarantee future results. All investments carry risk. Please consult a SEBI-registered financial advisor before making any investment decisions. Data sourced from public domain and financial media as of early 2026.
+  </div>
+</section>
+
+</main>
+
+<script>
+function showSection(id, btn) {
+  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

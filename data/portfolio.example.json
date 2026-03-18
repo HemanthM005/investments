@@ -1,0 +1,132 @@
+{
+  "investments": [
+    {
+      "id": "1",
+      "asset_name": "HAL",
+      "asset_type": "Stock",
+      "sector": "Defence",
+      "buy_price": 3200,
+      "current_price": 4100,
+      "quantity": 10,
+      "purchase_date": "2024-06-15",
+      "notes": "Strong order book, Atmanirbhar push"
+    },
+    {
+      "id": "2",
+      "asset_name": "Parag Parikh Flexi Cap",
+      "asset_type": "Mutual Fund",
+      "sector": "Diversified",
+      "buy_price": 65,
+      "current_price": 82,
+      "quantity": 500,
+      "purchase_date": "2023-11-20",
+      "notes": "SIP — global + India mix"
+    },
+    {
+      "id": "3",
+      "asset_name": "Nippon India Gold ETF",
+      "asset_type": "Gold",
+      "sector": "Commodities",
+      "buy_price": 5800,
+      "current_price": 7200,
+      "quantity": 5,
+      "purchase_date": "2024-01-10",
+      "notes": "Gold hedge"
+    }
+  ],
+  "money_records": [
+    {
+      "id": "1",
+      "type": "lent",
+      "person_name": "Rahul",
+      "amount": 5000,
+      "settled_amount": 0,
+      "date": "2024-12-01",
+      "due_date": "2025-03-01",
+      "description": "Borrowed for medical",
+      "status": "pending"
+    }
+  ],
+  "accounts": [
+    {
+      "id": "1",
+      "name": "SBI Savings",
+      "category": "Savings Account",
+      "balance": 45000,
+      "interest_rate": 2.7,
+      "maturity_date": "",
+      "notes": "Primary salary account",
+      "last_updated": "2025-03-01"
+    },
+    {
+      "id": "2",
+      "name": "HDFC Credit Card",
+      "category": "Credit Card",
+      "balance": 3200,
+      "interest_rate": 42,
+      "maturity_date": "",
+      "notes": "Due date: 5th of every month",
+      "last_updated": "2025-03-01"
+    },
+    {
+      "id": "3",
+      "name": "Wallet Cash",
+      "category": "Cash",
+      "balance": 2000,
+      "interest_rate": 0,
+      "maturity_date": "",
+      "notes": "",
+      "last_updated": "2025-03-01"
+    }
+  ],
+  "expenses": [
+    {
+      "id": "1",
+      "date": "2025-03-19",
+      "amount": 250,
+      "category": "Food & Dining",
+      "payment_source_id": "",
+      "payment_source_name": "Other",
+      "description": "Lunch at office canteen",
+      "notes": ""
+    },
+    {
+      "id": "2",
+      "date": "2025-03-18",
+      "amount": 150,
+      "category": "Transport",
+      "payment_source_id": "",
+      "payment_source_name": "Other",
+      "description": "Uber to metro",
+      "notes": ""
+    }
+  ],
+  "recurring": [
+    {
+      "id": "1",
+      "name": "Netflix",
+      "amount": 649,
+      "frequency": "Monthly",
+      "category": "Subscriptions",
+      "payment_source_id": "",
+      "payment_source_name": "Other",
+      "next_due": "2025-04-01",
+      "start_date": "2023-06-01",
+      "active": true,
+      "notes": "4K plan"
+    },
+    {
+      "id": "2",
+      "name": "Spotify",
+      "amount": 119,
+      "frequency": "Monthly",
+      "category": "Subscriptions",
+      "payment_source_id": "",
+      "payment_source_name": "Other",
+      "next_due": "2025-04-05",
+      "start_date": "2022-01-01",
+      "active": true,
+      "notes": "Individual plan"
+    }
+  ]
+}
