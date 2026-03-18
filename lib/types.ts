@@ -8,6 +8,7 @@ export interface Investment {
   quantity: number;
   purchase_date: string;
   notes: string;
+  ticker?: string;   // CoinGecko ID for Crypto (e.g. "bitcoin"), Yahoo Finance for others (coming soon)
 }
 
 export interface MoneyRecord {
