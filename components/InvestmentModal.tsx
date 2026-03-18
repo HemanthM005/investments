@@ -45,6 +45,7 @@ const EMPTY_FORM: Omit<Investment, 'id'> = {
   quantity: 0,
   purchase_date: new Date().toISOString().split('T')[0],
   notes: '',
+  ticker: '',
 };
 
 export default function InvestmentModal({ open, onClose, onSubmit, initialData }: Props) {
@@ -180,6 +181,28 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
               />
               {errors.purchase_date && <p className="text-xs text-red-400">{errors.purchase_date}</p>}
             </div>
+
+            {form.asset_type === 'Crypto' && (
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="ticker">
+                  CoinGecko ID
+                  <span className="ml-1.5 text-xs text-slate-500 font-normal">
+                    — for live price sync
+                  </span>
+                </Label>
+                <Input
+                  id="ticker"
+                  placeholder="e.g. bitcoin, ethereum, solana, matic-network"
+                  value={form.ticker ?? ''}
+                  onChange={(e) => setField('ticker', e.target.value.toLowerCase().trim())}
+                />
+                <p className="text-xs text-slate-500">
+                  Find the exact ID at{' '}
+                  <span className="text-indigo-400">coingecko.com</span>
+                  {' '}→ search your coin → copy the ID from the URL.
+                </p>
+              </div>
+            )}
 
             <div className="col-span-2 space-y-1.5">
               <Label htmlFor="notes">Notes</Label>
