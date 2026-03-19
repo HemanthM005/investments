@@ -182,17 +182,34 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
               {errors.purchase_date && <p className="text-xs text-red-400">{errors.purchase_date}</p>}
             </div>
 
+            {(form.asset_type === 'Stock' || form.asset_type === 'ETF') && (
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="ticker">
+                  NSE Ticker
+                  <span className="ml-1.5 text-xs text-slate-500 font-normal">— for live price sync (optional)</span>
+                </Label>
+                <Input
+                  id="ticker"
+                  placeholder="e.g. HAL.NS, TATAPOW.NS, NIFTYBEES.NS"
+                  value={form.ticker ?? ''}
+                  onChange={(e) => setField('ticker', e.target.value.toUpperCase().trim())}
+                />
+                <p className="text-xs text-slate-500">
+                  Use NSE symbol + <span className="text-indigo-400 font-medium">.NS</span> suffix.
+                  Find it on <span className="text-indigo-400">NSE India</span> or search Yahoo Finance.
+                </p>
+              </div>
+            )}
+
             {form.asset_type === 'Crypto' && (
               <div className="col-span-2 space-y-1.5">
                 <Label htmlFor="ticker">
                   CoinGecko ID
-                  <span className="ml-1.5 text-xs text-slate-500 font-normal">
-                    — for live price sync
-                  </span>
+                  <span className="ml-1.5 text-xs text-slate-500 font-normal">— for live price sync</span>
                 </Label>
                 <Input
                   id="ticker"
-                  placeholder="e.g. bitcoin, ethereum, solana, matic-network"
+                  placeholder="e.g. bitcoin, ethereum, ripple, internet-computer"
                   value={form.ticker ?? ''}
                   onChange={(e) => setField('ticker', e.target.value.toLowerCase().trim())}
                 />
@@ -201,6 +218,33 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
                   <span className="text-indigo-400">coingecko.com</span>
                   {' '}→ search your coin → copy the ID from the URL.
                 </p>
+              </div>
+            )}
+
+            {form.asset_type === 'Mutual Fund' && (
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="ticker">
+                  AMFI Scheme Code
+                  <span className="ml-1.5 text-xs text-slate-500 font-normal">— for live NAV sync (optional)</span>
+                </Label>
+                <Input
+                  id="ticker"
+                  placeholder="e.g. 122639"
+                  value={form.ticker ?? ''}
+                  onChange={(e) => setField('ticker', e.target.value.trim())}
+                />
+                <p className="text-xs text-slate-500">
+                  Find your fund&apos;s scheme code at{' '}
+                  <span className="text-indigo-400 font-medium">mfapi.in</span>
+                  {' '}→ search fund name → copy the number from the URL.
+                </p>
+              </div>
+            )}
+
+            {form.asset_type === 'Gold' && (
+              <div className="col-span-2 rounded-md border border-yellow-800/40 bg-yellow-950/20 px-3 py-2 text-xs text-yellow-300">
+                Live 24K gold spot price (₹/gram) will be fetched automatically.
+                Set <strong>Quantity</strong> to the number of grams you hold (1 SGB unit = 1 gram).
               </div>
             )}
 

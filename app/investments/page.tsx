@@ -31,6 +31,13 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import type { Investment } from '@/lib/types';
 
+function apiType(assetType: string): 'crypto' | 'stock' | 'mf' | 'gold' {
+  if (assetType === 'Crypto')      return 'crypto';
+  if (assetType === 'Gold')        return 'gold';
+  if (assetType === 'Mutual Fund') return 'mf';
+  return 'stock';
+}
+
 const ASSET_TYPE_COLORS: Record<string, string> = {
   Stock: 'bg-indigo-900/50 text-indigo-300',
   ETF: 'bg-purple-900/50 text-purple-300',
@@ -58,34 +65,45 @@ export default function InvestmentsPage() {
     () => investments.filter((inv) => inv.asset_type === 'Crypto' && inv.ticker?.trim()),
     [investments],
   );
+  const stocksWithTicker = useMemo(
+    () => investments.filter((inv) => (inv.asset_type === 'Stock' || inv.asset_type === 'ETF') && inv.ticker?.trim()),
+    [investments],
+  );
+  const mfWithTicker = useMemo(
+    () => investments.filter((inv) => inv.asset_type === 'Mutual Fund' && inv.ticker?.trim()),
+    [investments],
+  );
+  // Gold always uses XAU — no ticker needed from user
+  const goldInvestments = useMemo(
+    () => investments.filter((inv) => inv.asset_type === 'Gold'),
+    [investments],
+  );
+  const liveTrackedCount = cryptoWithTicker.length + stocksWithTicker.length + mfWithTicker.length + goldInvestments.length;
 
-  // Fetch prices for a list of tickers and update the matching investments
-  const fetchAndApply = useCallback(async (targets: typeof investments) => {
-    const ids = [...new Set(targets.map((inv) => inv.ticker!))];
-    const res = await fetch(`/api/prices?type=crypto&ids=${ids.join(',')}`);
-    if (!res.ok) throw new Error(`CoinGecko error ${res.status}`);
-    const { prices, stale } = await res.json() as {
-      prices: Record<string, number>;
-      stale?: boolean;
-    };
+  // Fetch prices for a list of investments of the same category and apply to store
+  const fetchAndApply = useCallback(async (targets: typeof investments, type: 'crypto' | 'stock' | 'mf' | 'gold') => {
+    const ids = type === 'gold' ? ['XAU'] : [...new Set(targets.map((inv) => inv.ticker!))];
+    const res = await fetch(`/api/prices?type=${type}&ids=${ids.join(',')}`);
+    if (!res.ok) throw new Error(`Price fetch error ${res.status}`);
+    const { prices } = await res.json() as { prices: Record<string, number> };
     targets.forEach((inv) => {
-      const price = prices[inv.ticker!];
+      const key   = type === 'gold' ? 'XAU' : inv.ticker!;
+      const price = prices[key];
       if (typeof price === 'number') {
         updateInvestment(inv.id, { current_price: price });
         setLiveIds((prev) => new Set(prev).add(inv.id));
       }
     });
     setLastRefreshed(new Date());
-    if (stale) setGlobalError('Using cached prices — CoinGecko temporarily unavailable');
-    else setGlobalError(null);
+    setGlobalError(null);
   }, [updateInvestment]);
 
   // Refresh a single investment row
   const refreshOne = useCallback(async (inv: typeof investments[0]) => {
-    if (!inv.ticker) return;
+    if (inv.asset_type !== 'Gold' && !inv.ticker) return;
     setRefreshingIds((prev) => new Set(prev).add(inv.id));
     try {
-      await fetchAndApply([inv]);
+      await fetchAndApply([inv], apiType(inv.asset_type));
     } catch (err) {
       setGlobalError(`Failed for ${inv.asset_name}: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -93,20 +111,25 @@ export default function InvestmentsPage() {
     }
   }, [fetchAndApply]);
 
-  // Refresh all crypto with tickers at once
+  // Refresh all live-tracked investments at once
   const refreshAll = useCallback(async () => {
-    if (cryptoWithTicker.length === 0) return;
-    cryptoWithTicker.forEach((inv) =>
+    if (liveTrackedCount === 0) return;
+    [...cryptoWithTicker, ...stocksWithTicker, ...mfWithTicker, ...goldInvestments].forEach((inv) =>
       setRefreshingIds((prev) => new Set(prev).add(inv.id))
     );
     try {
-      await fetchAndApply(cryptoWithTicker);
+      await Promise.all([
+        cryptoWithTicker.length > 0 ? fetchAndApply(cryptoWithTicker, 'crypto') : Promise.resolve(),
+        stocksWithTicker.length > 0 ? fetchAndApply(stocksWithTicker, 'stock')  : Promise.resolve(),
+        mfWithTicker.length     > 0 ? fetchAndApply(mfWithTicker,     'mf')     : Promise.resolve(),
+        goldInvestments.length  > 0 ? fetchAndApply(goldInvestments,  'gold')   : Promise.resolve(),
+      ]);
     } catch (err) {
       setGlobalError(`Refresh failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setRefreshingIds(new Set());
     }
-  }, [cryptoWithTicker, fetchAndApply]);
+  }, [cryptoWithTicker, stocksWithTicker, mfWithTicker, goldInvestments, liveTrackedCount, fetchAndApply]);
 
   // Use a ref so the interval always calls the latest refreshAll
   const refreshAllRef = useRef(refreshAll);
@@ -114,7 +137,7 @@ export default function InvestmentsPage() {
 
   // Auto-refresh every 5 minutes + initial fetch on mount
   useEffect(() => {
-    if (cryptoWithTicker.length === 0) return;
+    if (liveTrackedCount === 0) return;
     refreshAllRef.current();
     const id = setInterval(() => {
       if (document.visibilityState === 'visible') refreshAllRef.current();
@@ -189,8 +212,8 @@ export default function InvestmentsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Crypto refresh button — only shown when crypto investments have tickers */}
-          {cryptoWithTicker.length > 0 && (
+          {/* Refresh button — shown when crypto or gold investments have tickers */}
+          {liveTrackedCount > 0 && (
             <div className="flex flex-col items-end gap-0.5">
               <Button
                 variant="outline"
@@ -200,7 +223,7 @@ export default function InvestmentsPage() {
                 className="gap-1.5"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${refreshingIds.size > 0 ? 'animate-spin' : ''}`} />
-                {refreshingIds.size > 0 ? 'Refreshing…' : `Refresh All Crypto (${cryptoWithTicker.length})`}
+                {refreshingIds.size > 0 ? 'Refreshing…' : `Refresh Live Prices (${liveTrackedCount})`}
               </Button>
               {lastRefreshed && !globalError && (
                 <span className="text-xs text-slate-500 flex items-center gap-1">
@@ -354,7 +377,7 @@ export default function InvestmentsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-center gap-1">
-                            {inv.asset_type === 'Crypto' && inv.ticker && (
+                            {(inv.asset_type === 'Gold' || ((inv.asset_type === 'Crypto' || inv.asset_type === 'Stock' || inv.asset_type === 'ETF' || inv.asset_type === 'Mutual Fund') && inv.ticker)) && (
                               <Button
                                 variant="ghost"
                                 size="icon"
