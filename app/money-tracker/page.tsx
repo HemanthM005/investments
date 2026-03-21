@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Plus, Pencil, Trash2, CheckCircle, Clock, AlertCircle, HandCoins } from 'lucide-react';
 import { useMoneyStore, getOutstandingLent, getOutstandingBorrowed } from '@/lib/moneyStore';
+import { useExpenseStore } from '@/lib/expenseStore';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -376,10 +377,113 @@ function RecordCard({
   );
 }
 
+// ── Person Group Card ──────────────────────────────────────────────────────
+// Groups all records for one person into a single card with a breakdown list.
+
+function PersonGroup({
+  name, records, onEdit, onDelete, onSettle,
+}: {
+  name: string;
+  records: MoneyRecord[];
+  onEdit: (r: MoneyRecord) => void;
+  onDelete: (r: MoneyRecord) => void;
+  onSettle: (r: MoneyRecord) => void;
+}) {
+  const type = records[0]?.type;
+  const totalOutstanding = records
+    .filter((r) => r.status !== 'settled')
+    .reduce((s, r) => s + (r.amount - r.settled_amount), 0);
+  const allSettled = records.every((r) => r.status === 'settled');
+
+  return (
+    <div className={cn(
+      'bg-[#1a1d2e] border rounded-xl overflow-hidden',
+      allSettled ? 'border-[#2a2d3e] opacity-60' : type === 'lent' ? 'border-emerald-800/40' : 'border-red-800/40',
+    )}>
+      {/* Person header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2d3e]">
+        <span className="font-semibold text-slate-100">{name}</span>
+        <span className={cn('text-base font-bold', type === 'lent' ? 'text-emerald-400' : 'text-red-400')}>
+          {formatCurrency(totalOutstanding)} outstanding
+        </span>
+      </div>
+
+      {/* Individual records */}
+      <div className="divide-y divide-[#1e2133]">
+        {records.map((r) => {
+          const outstanding = r.amount - r.settled_amount;
+          const overdue = !r.due_date || r.status === 'settled' ? false : new Date(r.due_date) < new Date();
+          const pct = r.amount > 0 ? (r.settled_amount / r.amount) * 100 : 0;
+          return (
+            <div key={r.id} className={cn('px-4 py-3 space-y-2', overdue && 'bg-red-950/10')}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={cn(
+                      'text-xs px-2 py-0.5 rounded-full border font-medium flex items-center gap-1',
+                      STATUS_COLOR[r.status],
+                    )}>
+                      {STATUS_ICON[r.status]}{r.status}
+                    </span>
+                    {overdue && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-950/50 text-red-400 border border-red-800/40">overdue</span>
+                    )}
+                    {r.source_expense_id && (
+                      <span className="text-xs text-indigo-400/70">split</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">
+                    {r.description || '—'} · {r.date}{r.due_date ? ` · due ${r.due_date}` : ''}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-sm font-semibold text-slate-200">{formatCurrency(r.amount)}</div>
+                  {r.status !== 'settled' && (
+                    <div className="text-xs text-slate-500">{formatCurrency(outstanding)} left</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              {r.amount > 0 && pct > 0 && (
+                <div className="h-1 bg-[#2a2d3e] rounded-full overflow-hidden">
+                  <div
+                    className={cn('h-full rounded-full', type === 'lent' ? 'bg-emerald-500' : 'bg-red-500')}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                {r.status !== 'settled' && (
+                  <Button size="sm" variant="secondary" onClick={() => onSettle(r)} className="gap-1 text-xs h-6 px-2">
+                    <CheckCircle className="h-3 w-3" /> Settle
+                  </Button>
+                )}
+                <div className="ml-auto flex gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => onEdit(r)} className="h-6 w-6 text-slate-500 hover:text-indigo-400">
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => onDelete(r)} className="h-6 w-6 text-slate-500 hover:text-red-400">
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function MoneyTrackerPage() {
   const { records, addRecord, updateRecord, deleteRecord, markSettled } = useMoneyStore();
+  const updateExpense = useExpenseStore((s) => s.updateExpense);
+  const expenses = useExpenseStore((s) => s.expenses);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<MoneyRecord | null>(null);
   const [settleTarget, setSettleTarget] = useState<MoneyRecord | null>(null);
@@ -397,9 +501,36 @@ export default function MoneyTrackerPage() {
   const lentRecords = filtered.filter((r) => r.type === 'lent');
   const borrowedRecords = filtered.filter((r) => r.type === 'borrowed');
 
+  // Group records by person name so same person is never shown as duplicate cards
+  function groupByPerson(recs: MoneyRecord[]) {
+    const map = new Map<string, MoneyRecord[]>();
+    recs.forEach((r) => {
+      if (!map.has(r.person_name)) map.set(r.person_name, []);
+      map.get(r.person_name)!.push(r);
+    });
+    return [...map.entries()];
+  }
+  const lentGroups    = useMemo(() => groupByPerson(lentRecords),    [lentRecords]);
+  const borrowedGroups = useMemo(() => groupByPerson(borrowedRecords), [borrowedRecords]);
+
   const handleSubmit = (data: Omit<MoneyRecord, 'id'>) => {
     if (editTarget) {
       updateRecord(editTarget.id, data);
+      // If person name changed and this record is linked to a split expense, sync back
+      if (
+        editTarget.source_expense_id &&
+        editTarget.person_name !== data.person_name
+      ) {
+        const expense = expenses.find((e) => e.id === editTarget.source_expense_id);
+        if (expense?.splits) {
+          const updatedSplits = expense.splits.map((s) =>
+            s.person_name === editTarget.person_name
+              ? { ...s, person_name: data.person_name }
+              : s,
+          );
+          updateExpense(expense.id, { splits: updatedSplits });
+        }
+      }
     } else {
       addRecord(data);
     }
@@ -485,20 +616,21 @@ export default function MoneyTrackerPage() {
                 <h2 className="text-sm font-semibold text-emerald-400 flex items-center gap-2">
                   💸 Money I Lent
                   <span className="text-xs text-slate-500 font-normal">
-                    ({lentRecords.length} record{lentRecords.length !== 1 ? 's' : ''})
+                    ({lentGroups.length} person{lentGroups.length !== 1 ? 's' : ''})
                   </span>
                 </h2>
               )}
-              {lentRecords.length === 0 ? (
+              {lentGroups.length === 0 ? (
                 <p className="text-sm text-slate-500 py-4">No lending records.</p>
               ) : (
-                lentRecords.map((r) => (
-                  <RecordCard
-                    key={r.id}
-                    record={r}
-                    onEdit={() => { setEditTarget(r); setModalOpen(true); }}
-                    onDelete={() => deleteRecord(r.id)}
-                    onSettle={() => setSettleTarget(r)}
+                lentGroups.map(([name, recs]) => (
+                  <PersonGroup
+                    key={name}
+                    name={name}
+                    records={recs}
+                    onEdit={(r) => { setEditTarget(r); setModalOpen(true); }}
+                    onDelete={(r) => deleteRecord(r.id)}
+                    onSettle={(r) => setSettleTarget(r)}
                   />
                 ))
               )}
@@ -512,20 +644,21 @@ export default function MoneyTrackerPage() {
                 <h2 className="text-sm font-semibold text-red-400 flex items-center gap-2">
                   🤝 Money I Borrowed
                   <span className="text-xs text-slate-500 font-normal">
-                    ({borrowedRecords.length} record{borrowedRecords.length !== 1 ? 's' : ''})
+                    ({borrowedGroups.length} person{borrowedGroups.length !== 1 ? 's' : ''})
                   </span>
                 </h2>
               )}
-              {borrowedRecords.length === 0 ? (
+              {borrowedGroups.length === 0 ? (
                 <p className="text-sm text-slate-500 py-4">No borrowing records.</p>
               ) : (
-                borrowedRecords.map((r) => (
-                  <RecordCard
-                    key={r.id}
-                    record={r}
-                    onEdit={() => { setEditTarget(r); setModalOpen(true); }}
-                    onDelete={() => deleteRecord(r.id)}
-                    onSettle={() => setSettleTarget(r)}
+                borrowedGroups.map(([name, recs]) => (
+                  <PersonGroup
+                    key={name}
+                    name={name}
+                    records={recs}
+                    onEdit={(r) => { setEditTarget(r); setModalOpen(true); }}
+                    onDelete={(r) => deleteRecord(r.id)}
+                    onSettle={(r) => setSettleTarget(r)}
                   />
                 ))
               )}

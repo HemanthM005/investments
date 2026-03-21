@@ -8,7 +8,11 @@ export interface Investment {
   quantity: number;
   purchase_date: string;
   notes: string;
-  ticker?: string;   // CoinGecko ID for Crypto (e.g. "bitcoin"), Yahoo Finance for others (coming soon)
+  ticker?: string;          // CoinGecko ID for Crypto, Yahoo Finance for stocks, AMFI code for MF
+  status?: 'active' | 'watchlist';  // omitted = active
+  buy_range?: string;       // watchlist only — target entry range e.g. "3500-3750"
+  research?: string;        // long-form research notes (shown in popup)
+  _deleted?: boolean;       // soft-delete tombstone — filtered from UI, kept in file
 }
 
 export interface MoneyRecord {
@@ -21,6 +25,7 @@ export interface MoneyRecord {
   due_date: string;             // expected return date (optional, empty = no deadline)
   description: string;
   status: 'pending' | 'partial' | 'settled';
+  source_expense_id?: string;   // links back to the Expense that created this record via a split
 }
 
 export type AssetCategory =
@@ -63,6 +68,11 @@ export type ExpenseCategory =
   | 'Gifts & Donations'
   | 'Other';
 
+export interface ExpenseSplit {
+  person_name: string;
+  amount: number; // amount they owe you
+}
+
 export interface Expense {
   id: string;
   date: string;              // ISO date YYYY-MM-DD
@@ -72,6 +82,7 @@ export interface Expense {
   payment_source_name: string; // snapshot of account name at time of entry
   description: string;
   notes: string;
+  splits?: ExpenseSplit[];
 }
 
 export type RecurringFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'Quarterly' | 'Yearly';

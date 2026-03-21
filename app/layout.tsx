@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import HydrationProvider from '@/components/HydrationProvider';
+import SaveErrorBanner from '@/components/SaveErrorBanner';
 
 export const metadata: Metadata = {
   title: 'Investment Portfolio Dashboard',
@@ -21,6 +22,7 @@ export default function RootLayout({
           <main className="min-h-[calc(100vh-56px)]">
             {children}
           </main>
+          <SaveErrorBanner />
         </HydrationProvider>
       </body>
     </html>

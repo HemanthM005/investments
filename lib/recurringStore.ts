@@ -2,15 +2,10 @@
 
 import { create } from 'zustand';
 import type { RecurringExpense, RecurringFrequency } from './types';
+import { saveSection } from './saveHelper';
 
-async function saveToFile(items: RecurringExpense[]) {
-  try {
-    await fetch('/api/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ section: 'recurring', data: items }),
-    });
-  } catch { /* silent */ }
+function saveToFile(items: RecurringExpense[]) {
+  saveSection('recurring', items);
 }
 
 interface RecurringStore {
@@ -38,7 +33,7 @@ export const useRecurringStore = create<RecurringStore>()((set, get) => ({
   },
 
   addRecurring: (item) => {
-    const updated = [...get().recurring, { ...item, id: Date.now().toString() }];
+    const updated = [...get().recurring, { ...item, id: crypto.randomUUID() }];
     set({ recurring: updated });
     saveToFile(updated);
   },

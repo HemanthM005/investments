@@ -14,6 +14,7 @@ const navLinks = [
   { href: '/cash-accounts', label: 'Cash & Accounts', icon: PiggyBank },
   { href: '/india-sectors-report', label: 'India Sectors Report', icon: FileText },
   { href: '/invest-3-lakhs-plan', label: 'Invest ₹3L Plan', icon: Landmark },
+  { href: '/paras-defence-report', label: 'Paras Defence Report', icon: FileText },
 ];
 
 export default function Navbar() {

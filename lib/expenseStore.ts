@@ -4,14 +4,10 @@ import { create } from 'zustand';
 import type { Expense } from './types';
 import { useAssetStore } from './assetStore';
 
-async function saveToFile(expenses: Expense[]) {
-  try {
-    await fetch('/api/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ section: 'expenses', data: expenses }),
-    });
-  } catch { /* silent */ }
+import { saveSection } from './saveHelper';
+
+function saveToFile(expenses: Expense[]) {
+  saveSection('expenses', expenses);
 }
 
 // Adjust an account's balance when an expense is added/removed.
@@ -30,7 +26,7 @@ interface ExpenseStore {
   expenses: Expense[];
   hydrated: boolean;
   hydrate: () => Promise<void>;
-  addExpense: (expense: Omit<Expense, 'id'>) => void;
+  addExpense: (expense: Omit<Expense, 'id'>) => string;  // returns new expense id
   updateExpense: (id: string, updates: Partial<Omit<Expense, 'id'>>) => void;
   deleteExpense: (id: string) => void;
 }
@@ -51,12 +47,13 @@ export const useExpenseStore = create<ExpenseStore>()((set, get) => ({
   },
 
   addExpense: (expense) => {
-    const newExpense = { ...expense, id: Date.now().toString() };
+    const newExpense = { ...expense, id: crypto.randomUUID() };
     const updated = [newExpense, ...get().expenses];
     set({ expenses: updated });
     saveToFile(updated);
     // Deduct from linked account
     adjustAccountBalance(expense.payment_source_id, -expense.amount);
+    return newExpense.id;
   },
 
   updateExpense: (id, updates) => {
