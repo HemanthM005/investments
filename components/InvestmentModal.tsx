@@ -46,6 +46,8 @@ const EMPTY_FORM: Omit<Investment, 'id'> = {
   purchase_date: new Date().toISOString().split('T')[0],
   notes: '',
   ticker: '',
+  status: 'active',
+  buy_range: '',
 };
 
 export default function InvestmentModal({ open, onClose, onSubmit, initialData }: Props) {
@@ -62,14 +64,18 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
     setErrors({});
   }, [initialData, open]);
 
+  const isWatchlist = form.status === 'watchlist';
+
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.asset_name.trim()) e.asset_name = 'Asset name is required';
     if (!form.sector.trim()) e.sector = 'Sector is required';
-    if (form.buy_price <= 0) e.buy_price = 'Buy price must be greater than 0';
     if (form.current_price <= 0) e.current_price = 'Current price must be greater than 0';
-    if (form.quantity <= 0) e.quantity = 'Quantity must be greater than 0';
-    if (!form.purchase_date) e.purchase_date = 'Purchase date is required';
+    if (!isWatchlist) {
+      if (form.buy_price <= 0) e.buy_price = 'Buy price must be greater than 0';
+      if (form.quantity <= 0) e.quantity = 'Quantity must be greater than 0';
+      if (!form.purchase_date) e.purchase_date = 'Purchase date is required';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -92,6 +98,24 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
           <DialogTitle>{initialData ? 'Edit Investment' : 'Add Investment'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Portfolio vs Watchlist toggle */}
+          <div className="flex rounded-lg border border-[#2a2d3e] overflow-hidden text-sm">
+            {(['active', 'watchlist'] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setField('status', s)}
+                className={`flex-1 py-2 font-medium transition-colors ${
+                  form.status === s
+                    ? s === 'watchlist' ? 'bg-violet-900/40 text-violet-300' : 'bg-indigo-900/40 text-indigo-300'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {s === 'active' ? 'Portfolio (Owned)' : 'Watchlist (Research)'}
+              </button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
               <Label htmlFor="asset_name">Asset Name *</Label>
@@ -132,55 +156,52 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
               {errors.sector && <p className="text-xs text-red-400">{errors.sector}</p>}
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="buy_price">Buy Price (₹) *</Label>
-              <Input
-                id="buy_price"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={form.buy_price || ''}
-                onChange={(e) => setField('buy_price', parseFloat(e.target.value) || 0)}
-              />
-              {errors.buy_price && <p className="text-xs text-red-400">{errors.buy_price}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="current_price">Current Price (₹) *</Label>
-              <Input
-                id="current_price"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={form.current_price || ''}
-                onChange={(e) => setField('current_price', parseFloat(e.target.value) || 0)}
-              />
-              {errors.current_price && <p className="text-xs text-red-400">{errors.current_price}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="quantity">Quantity *</Label>
-              <Input
-                id="quantity"
-                type="number"
-                step="0.001"
-                placeholder="0"
-                value={form.quantity || ''}
-                onChange={(e) => setField('quantity', parseFloat(e.target.value) || 0)}
-              />
-              {errors.quantity && <p className="text-xs text-red-400">{errors.quantity}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="purchase_date">Purchase Date *</Label>
-              <Input
-                id="purchase_date"
-                type="date"
-                value={form.purchase_date}
-                onChange={(e) => setField('purchase_date', e.target.value)}
-              />
-              {errors.purchase_date && <p className="text-xs text-red-400">{errors.purchase_date}</p>}
-            </div>
+            {isWatchlist ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="current_price">Current Price (₹) *</Label>
+                  <Input id="current_price" type="number" step="0.01" placeholder="0.00"
+                    value={form.current_price || ''}
+                    onChange={(e) => setField('current_price', parseFloat(e.target.value) || 0)} />
+                  {errors.current_price && <p className="text-xs text-red-400">{errors.current_price}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="buy_range">Buy Range (₹) <span className="text-slate-500 font-normal">e.g. 3500-3750</span></Label>
+                  <Input id="buy_range" placeholder="low-high" value={form.buy_range ?? ''}
+                    onChange={(e) => setField('buy_range', e.target.value)} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="buy_price">Buy Price (₹) *</Label>
+                  <Input id="buy_price" type="number" step="0.01" placeholder="0.00"
+                    value={form.buy_price || ''}
+                    onChange={(e) => setField('buy_price', parseFloat(e.target.value) || 0)} />
+                  {errors.buy_price && <p className="text-xs text-red-400">{errors.buy_price}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="current_price">Current Price (₹) *</Label>
+                  <Input id="current_price" type="number" step="0.01" placeholder="0.00"
+                    value={form.current_price || ''}
+                    onChange={(e) => setField('current_price', parseFloat(e.target.value) || 0)} />
+                  {errors.current_price && <p className="text-xs text-red-400">{errors.current_price}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="quantity">Quantity *</Label>
+                  <Input id="quantity" type="number" step="0.001" placeholder="0"
+                    value={form.quantity || ''}
+                    onChange={(e) => setField('quantity', parseFloat(e.target.value) || 0)} />
+                  {errors.quantity && <p className="text-xs text-red-400">{errors.quantity}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="purchase_date">Purchase Date *</Label>
+                  <Input id="purchase_date" type="date" value={form.purchase_date}
+                    onChange={(e) => setField('purchase_date', e.target.value)} />
+                  {errors.purchase_date && <p className="text-xs text-red-400">{errors.purchase_date}</p>}
+                </div>
+              </>
+            )}
 
             {(form.asset_type === 'Stock' || form.asset_type === 'ETF') && (
               <div className="col-span-2 space-y-1.5">

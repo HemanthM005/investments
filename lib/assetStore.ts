@@ -2,15 +2,10 @@
 
 import { create } from 'zustand';
 import type { AssetAccount } from './types';
+import { saveSection } from './saveHelper';
 
-async function saveToFile(accounts: AssetAccount[]) {
-  try {
-    await fetch('/api/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ section: 'accounts', data: accounts }),
-    });
-  } catch { /* silent */ }
+function saveToFile(accounts: AssetAccount[]) {
+  saveSection('accounts', accounts);
 }
 
 interface AssetStore {
@@ -38,7 +33,7 @@ export const useAssetStore = create<AssetStore>()((set, get) => ({
   },
 
   addAccount: (account) => {
-    const updated = [...get().accounts, { ...account, id: Date.now().toString() }];
+    const updated = [...get().accounts, { ...account, id: crypto.randomUUID() }];
     set({ accounts: updated });
     saveToFile(updated);
   },

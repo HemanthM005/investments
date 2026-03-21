@@ -4,12 +4,13 @@ import { useState, useMemo } from 'react';
 import {
   Plus, Pencil, Trash2, Receipt, ShoppingCart, Utensils, Car,
   Tv, HeartPulse, Zap, GraduationCap, Plane, Home, RefreshCw,
-  Sparkles, Gift, HelpCircle, X, ChevronDown, Unlink,
+  Sparkles, Gift, HelpCircle, X, ChevronDown, Unlink, Users,
 } from 'lucide-react';
 import { useExpenseStore } from '@/lib/expenseStore';
 import { useAssetStore } from '@/lib/assetStore';
+import { useMoneyStore } from '@/lib/moneyStore';
 import { formatCurrency } from '@/lib/utils';
-import type { Expense, ExpenseCategory } from '@/lib/types';
+import type { Expense, ExpenseCategory, ExpenseSplit, MoneyRecord } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -64,18 +65,125 @@ const EMPTY: Omit<Expense, 'id'> = {
   payment_source_id: '', payment_source_name: '', description: '', notes: '',
 };
 
+// ── split participant type (module scope to avoid HMR issues) ─────────────────
+
+type SplitParticipant = { id: string; name: string; isYou: boolean; value: number };
+
+// ── person name input with suggestions dropdown ───────────────────────────────
+
+function PersonInput({
+  value, onChange, suggestions,
+}: {
+  value: string;
+  onChange: (name: string) => void;
+  suggestions: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const filtered = suggestions.filter(
+    (n) => !value || n.toLowerCase().includes(value.toLowerCase()),
+  );
+
+  return (
+    <div className="relative flex-1">
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder="Person name…"
+        className="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-3 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-0.5 bg-[#1a1d2e] border border-[#2a2d3e] rounded-lg shadow-xl z-50 max-h-36 overflow-y-auto">
+          {filtered.map((name) => (
+            <button
+              key={name}
+              type="button"
+              onMouseDown={() => { onChange(name); setOpen(false); }}
+              className="w-full text-left px-3 py-1.5 text-sm text-slate-300 hover:bg-indigo-950/40 hover:text-slate-100 transition-colors"
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── modal ─────────────────────────────────────────────────────────────────────
 
 function ExpenseModal({
-  initial, onSave, onClose,
+  initial, onSave, onClose, existingPersonNames,
 }: {
   initial: Omit<Expense, 'id'> & { id?: string };
   onSave: (data: Omit<Expense, 'id'> & { id?: string }) => void;
   onClose: () => void;
+  existingPersonNames: string[];
 }) {
   const accounts = useAssetStore((s) => s.accounts);
   const [form, setForm] = useState(initial);
   const setField = (k: string, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Split state — initialise from existing splits when editing
+  const [splitEnabled, setSplitEnabled] = useState(
+    !!(initial.id && initial.splits && initial.splits.length > 0),
+  );
+  const [splitMethod, setSplitMethod] = useState<'equal' | 'shares' | 'percent' | 'custom'>(
+    (initial.id && initial.splits && initial.splits.length > 0) ? 'custom' : 'equal',
+  );
+  const [participants, setParticipants] = useState<SplitParticipant[]>(() => {
+    if (initial.id && initial.splits && initial.splits.length > 0) {
+      const othersTotal = initial.splits.reduce((s, sp) => s + sp.amount, 0);
+      const youAmt = Math.max(0, Math.round(((initial.amount || 0) - othersTotal) * 100) / 100);
+      return [
+        { id: 'you', name: 'You', isYou: true, value: youAmt },
+        ...initial.splits.map((sp, i) => ({
+          id: `edit-${i}`,
+          name: sp.person_name,
+          isYou: false,
+          value: sp.amount,
+        })),
+      ];
+    }
+    return [{ id: 'you', name: 'You', isYou: true, value: 1 }];
+  });
+
+  function getParticipantAmount(p: SplitParticipant): number {
+    if (!form.amount) return 0;
+    switch (splitMethod) {
+      case 'equal':
+        return Math.round((form.amount / participants.length) * 100) / 100;
+      case 'shares': {
+        const total = participants.reduce((s, x) => s + (x.value ?? 0), 0);
+        if (total === 0) return 0;
+        return Math.round(((p.value ?? 0) / total) * form.amount * 100) / 100;
+      }
+      case 'percent':
+        return Math.round(((p.value || 0) / 100) * form.amount * 100) / 100;
+      case 'custom':
+        if (p.isYou) {
+          const othersTotal = participants.filter(x => !x.isYou).reduce((s, x) => s + (x.value || 0), 0);
+          return Math.max(0, Math.round(((form.amount || 0) - othersTotal) * 100) / 100);
+        }
+        return Math.round((p.value || 0) * 100) / 100;
+    }
+  }
+
+  const percentTotal = participants.reduce((s, p) => s + (p.value || 0), 0);
+  const percentValid = splitMethod !== 'percent' || Math.abs(percentTotal - 100) < 0.01;
+
+  function addParticipant() {
+    setParticipants((prev) => [...prev, { id: crypto.randomUUID(), name: '', isYou: false, value: 1 }]);
+  }
+
+  function removeParticipant(id: string) {
+    setParticipants((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  function updateParticipant(id: string, patch: Partial<SplitParticipant>) {
+    setParticipants((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  }
 
   function selectAccount(id: string) {
     const acc = accounts.find((a) => a.id === id);
@@ -86,7 +194,7 @@ function ExpenseModal({
     }));
   }
 
-  const canSave = form.description.trim().length > 0 && form.amount > 0;
+  const canSave = form.description.trim().length > 0 && form.amount > 0 && (!splitEnabled || percentValid);
 
   // Group accounts by category for a cleaner picker
   const grouped = useMemo(() => {
@@ -203,11 +311,135 @@ function ExpenseModal({
               className="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
               placeholder="Any extra details…" />
           </div>
+
+          {/* Split section — full UI for both add and edit */}
+          <div className="border-t border-[#2a2d3e] pt-4">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={splitEnabled}
+                onChange={(e) => {
+                  setSplitEnabled(e.target.checked);
+                  if (e.target.checked && participants.length <= 1) {
+                    setParticipants([{ id: 'you', name: 'You', isYou: true, value: 1 }]);
+                    setSplitMethod('equal');
+                  }
+                }}
+                className="rounded border-slate-600 accent-indigo-500"
+              />
+              <span className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5 text-indigo-400" />
+                Split with others
+              </span>
+            </label>
+
+            {splitEnabled && (
+              <div className="mt-3 space-y-3">
+                {/* Method buttons */}
+                <div className="flex gap-1.5 flex-wrap">
+                  {(['equal', 'shares', 'percent', 'custom'] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setSplitMethod(m)}
+                      className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+                        splitMethod === m
+                          ? 'border-indigo-500 bg-indigo-950/40 text-indigo-300'
+                          : 'border-[#2a2d3e] text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {m === 'equal' ? 'Equal' : m === 'shares' ? 'By Shares' : m === 'percent' ? 'By %' : 'Custom ₹'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Participant rows */}
+                <div className="space-y-2">
+                  {participants.map((p) => (
+                    <div key={p.id} className="flex items-center gap-2">
+                      {p.isYou ? (
+                        <span className="flex-1 text-sm text-slate-500 px-3 py-1.5 bg-[#0f1117] border border-[#2a2d3e] rounded-lg">
+                          You
+                        </span>
+                      ) : (
+                        <PersonInput
+                          value={p.name}
+                          onChange={(name) => updateParticipant(p.id, { name })}
+                          suggestions={existingPersonNames}
+                        />
+                      )}
+                      {/* Value input: hidden for equal; auto-label for You+custom; input for everything else */}
+                      {splitMethod !== 'equal' && (
+                        p.isYou && splitMethod === 'custom' ? (
+                          <span className="w-20 text-xs text-slate-500 text-center">auto</span>
+                        ) : (
+                          <input
+                            type="number"
+                            min="0"
+                            step={splitMethod === 'percent' ? '1' : splitMethod === 'custom' ? '1' : '0.5'}
+                            value={p.value || ''}
+                            onChange={(e) => updateParticipant(p.id, { value: parseFloat(e.target.value) || 0 })}
+                            className="w-20 bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-2 py-1.5 text-xs text-slate-100 text-center focus:outline-none focus:border-indigo-500"
+                            placeholder={splitMethod === 'percent' ? '%' : splitMethod === 'custom' ? '₹' : 'sh'}
+                          />
+                        )
+                      )}
+                      <span className="text-xs font-medium text-emerald-400 w-20 text-right shrink-0">
+                        ₹{getParticipantAmount(p).toLocaleString('en-IN')}
+                      </span>
+                      {!p.isYou && (
+                        <button
+                          type="button"
+                          onClick={() => removeParticipant(p.id)}
+                          className="text-slate-600 hover:text-red-400 transition-colors"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addParticipant}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
+                >
+                  <Plus className="h-3 w-3" /> Add person
+                </button>
+
+                {splitMethod === 'percent' && (
+                  <p className={`text-xs ${percentValid ? 'text-slate-500' : 'text-amber-400'}`}>
+                    Total: {percentTotal.toFixed(1)}%
+                    {!percentValid && ' — must equal 100%'}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-2 p-5 pt-0 sticky bottom-0 bg-[#1a1d2e]">
           <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-          <Button className="flex-1" disabled={!canSave} onClick={() => onSave(form)}>
+          <Button
+            className="flex-1"
+            disabled={!canSave}
+            onClick={() => {
+              const computedSplits: ExpenseSplit[] | undefined = splitEnabled
+                ? participants
+                    .filter((p) => !p.isYou && p.name.trim())
+                    .map((p) => ({ person_name: p.name.trim(), amount: getParticipantAmount(p) }))
+                    .filter((s) => s.amount > 0)
+                : undefined;
+              const splits = computedSplits?.length ? computedSplits : undefined;
+              if (form.id) {
+                const { id, ...rest } = form as typeof form & { id: string };
+                onSave({ ...rest, id, splits });
+              } else {
+                onSave({ ...form, splits });
+              }
+            }}
+          >
             {form.id ? 'Save Changes' : 'Add Expense'}
           </Button>
         </div>
@@ -223,6 +455,15 @@ export default function ExpensesPage() {
   const addExpense    = useExpenseStore((s) => s.addExpense);
   const updateExpense = useExpenseStore((s) => s.updateExpense);
   const deleteExpense = useExpenseStore((s) => s.deleteExpense);
+  const addRecord     = useMoneyStore((s) => s.addRecord);
+  const updateRecord  = useMoneyStore((s) => s.updateRecord);
+  const deleteRecord  = useMoneyStore((s) => s.deleteRecord);
+  const moneyRecords  = useMoneyStore((s) => s.records);
+
+  const existingPersonNames = useMemo(
+    () => [...new Set(moneyRecords.map((r) => r.person_name))].sort(),
+    [moneyRecords],
+  );
 
   const [modal, setModal] = useState<null | (Omit<Expense, 'id'> & { id?: string })>(null);
   const [filterMonth, setFilterMonth] = useState(today().slice(0, 7));
@@ -244,9 +485,17 @@ export default function ExpensesPage() {
     [monthExpenses],
   );
   const categoryBreakdown = useMemo(() => {
-    const map: Record<string, number> = {};
-    monthExpenses.forEach((e) => { map[e.category] = (map[e.category] ?? 0) + e.amount; });
-    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+    const total: Record<string, number> = {};
+    const mine: Record<string, number> = {};
+    monthExpenses.forEach((e) => {
+      const splitTotal = (e.splits ?? []).reduce((s, sp) => s + sp.amount, 0);
+      const myShare = Math.max(0, e.amount - splitTotal);
+      total[e.category] = (total[e.category] ?? 0) + e.amount;
+      mine[e.category]  = (mine[e.category]  ?? 0) + myShare;
+    });
+    return Object.entries(total)
+      .map(([cat, amt]) => ({ cat, amt, myShare: mine[cat] ?? 0 }))
+      .sort((a, b) => b.amt - a.amt);
   }, [monthExpenses]);
 
   // All unique account names for filter
@@ -321,7 +570,7 @@ export default function ExpensesPage() {
               <p className="text-xs text-slate-600">No data for this month.</p>
             ) : (
               <div className="space-y-1.5">
-                {categoryBreakdown.slice(0, 3).map(([cat, amt]) => {
+                {categoryBreakdown.slice(0, 3).map(({ cat, amt }) => {
                   const pct = monthSpend > 0 ? (amt / monthSpend) * 100 : 0;
                   return (
                     <div key={cat} className="flex items-center gap-2">
@@ -412,6 +661,14 @@ export default function ExpensesPage() {
                                   <span className="text-slate-600">{exp.notes}</span>
                                 </>
                               )}
+                              {exp.splits && exp.splits.length > 0 && (
+                                <>
+                                  <span className="text-slate-700">·</span>
+                                  <span className="text-violet-400">
+                                    Split: {exp.splits.map((s) => `${s.person_name} ₹${s.amount.toLocaleString('en-IN')}`).join(', ')}
+                                  </span>
+                                </>
+                              )}
                             </p>
                           </div>
                           <div className="flex items-center gap-3">
@@ -421,7 +678,14 @@ export default function ExpensesPage() {
                                 className="p-1 rounded hover:bg-indigo-900/40 text-slate-500 hover:text-indigo-400 transition-colors">
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
-                              <button onClick={() => { if (confirm('Delete this expense?')) deleteExpense(exp.id); }}
+                              <button onClick={() => {
+                                if (!confirm('Delete this expense?')) return;
+                                // Delete all linked split records in Money Tracker
+                                useMoneyStore.getState().records
+                                  .filter((r) => r.source_expense_id === exp.id)
+                                  .forEach((r) => deleteRecord(r.id));
+                                deleteExpense(exp.id);
+                              }}
                                 className="p-1 rounded hover:bg-red-900/40 text-slate-500 hover:text-red-400 transition-colors">
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -449,15 +713,19 @@ export default function ExpensesPage() {
               <thead>
                 <tr className="border-b border-[#2a2d3e] text-xs text-slate-500">
                   <th className="text-left px-4 py-2 font-medium">Category</th>
-                  <th className="text-right px-4 py-2 font-medium">Amount</th>
+                  <th className="text-right px-4 py-2 font-medium">Total</th>
                   <th className="text-right px-4 py-2 font-medium">% of Total</th>
+                  <th className="text-right px-4 py-2 font-medium">My Share</th>
+                  <th className="text-right px-4 py-2 font-medium">% of My Spend</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#2a2d3e]">
-                {categoryBreakdown.map(([cat, amt]) => {
+                {categoryBreakdown.map(({ cat, amt, myShare }) => {
                   const Icon = CATEGORY_ICONS[cat as ExpenseCategory];
                   const iconClass = CATEGORY_COLORS[cat as ExpenseCategory];
+                  const totalMyShare = categoryBreakdown.reduce((s, r) => s + r.myShare, 0);
                   const pct = monthSpend > 0 ? (amt / monthSpend) * 100 : 0;
+                  const myPct = totalMyShare > 0 ? (myShare / totalMyShare) * 100 : 0;
                   return (
                     <tr key={cat} className="hover:bg-white/[0.02]">
                       <td className="px-4 py-2.5">
@@ -470,12 +738,18 @@ export default function ExpensesPage() {
                       </td>
                       <td className="px-4 py-2.5 text-right font-semibold text-slate-100">{formatCurrency(amt)}</td>
                       <td className="px-4 py-2.5 text-right text-slate-500">{pct.toFixed(1)}%</td>
+                      <td className="px-4 py-2.5 text-right font-semibold text-emerald-400">{formatCurrency(myShare)}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">{myPct.toFixed(1)}%</td>
                     </tr>
                   );
                 })}
                 <tr className="border-t border-[#2a2d3e] font-semibold">
                   <td className="px-4 py-2.5 text-slate-300">Total</td>
                   <td className="px-4 py-2.5 text-right text-slate-100">{formatCurrency(monthSpend)}</td>
+                  <td className="px-4 py-2.5 text-right text-slate-500">100%</td>
+                  <td className="px-4 py-2.5 text-right text-emerald-400">
+                    {formatCurrency(categoryBreakdown.reduce((s, r) => s + r.myShare, 0))}
+                  </td>
                   <td className="px-4 py-2.5 text-right text-slate-500">100%</td>
                 </tr>
               </tbody>
@@ -488,10 +762,70 @@ export default function ExpensesPage() {
       {modal && (
         <ExpenseModal
           initial={modal}
+          existingPersonNames={existingPersonNames}
           onClose={() => setModal(null)}
           onSave={(data) => {
-            if (data.id) updateExpense(data.id, data);
-            else addExpense(data);
+            if (data.id) {
+              // ── EDIT ──────────────────────────────────────────────────────
+              const { id, ...updates } = data as typeof data & { id: string };
+              const oldExpense = expenses.find((e) => e.id === id);
+              updateExpense(id, updates);
+
+              // Sync split records by source_expense_id
+              const linkedRecords = useMoneyStore.getState().records.filter(
+                (r) => r.source_expense_id === id,
+              );
+              const newSplits = updates.splits ?? [];
+              const newSplitMap = new Map(newSplits.map((s) => [s.person_name, s]));
+
+              // Delete records for people removed from split
+              linkedRecords.forEach((rec) => {
+                if (!newSplitMap.has(rec.person_name)) deleteRecord(rec.id);
+              });
+
+              // Update existing linked records or create new ones
+              newSplits.forEach((split) => {
+                if (!split.person_name || split.amount <= 0) return;
+                const linked = linkedRecords.find((r) => r.person_name === split.person_name);
+                if (linked) {
+                  updateRecord(linked.id, {
+                    amount: split.amount,
+                    person_name: split.person_name,
+                    status: linked.settled_amount >= split.amount ? 'settled'
+                      : linked.settled_amount > 0 ? 'partial' : 'pending',
+                  });
+                } else {
+                  addRecord({
+                    type: 'lent',
+                    person_name: split.person_name,
+                    amount: split.amount,
+                    settled_amount: 0,
+                    date: oldExpense?.date ?? data.date,
+                    due_date: '',
+                    description: `Split: ${oldExpense?.description ?? ''}`,
+                    status: 'pending',
+                    source_expense_id: id,
+                  });
+                }
+              });
+            } else {
+              // ── ADD ───────────────────────────────────────────────────────
+              const newExpenseId = addExpense(data);
+              (data.splits ?? []).forEach((split) => {
+                if (!split.person_name || split.amount <= 0) return;
+                addRecord({
+                  type: 'lent',
+                  person_name: split.person_name,
+                  amount: Math.round(split.amount * 100) / 100,
+                  settled_amount: 0,
+                  date: data.date,
+                  due_date: '',
+                  description: `Split: ${data.description}`,
+                  status: 'pending',
+                  source_expense_id: newExpenseId,
+                });
+              });
+            }
             setModal(null);
           }}
         />

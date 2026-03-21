@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import type { Investment } from './types';
+import { saveSection } from './saveHelper';
 
 const SAMPLE_INVESTMENTS: Investment[] = [
   {
@@ -72,14 +73,8 @@ const SAMPLE_INVESTMENTS: Investment[] = [
   },
 ];
 
-async function saveToFile(investments: Investment[]) {
-  try {
-    await fetch('/api/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ section: 'investments', data: investments }),
-    });
-  } catch { /* silently fail */ }
+function saveToFile(investments: Investment[]) {
+  saveSection('investments', investments);
 }
 
 // Read localStorage investments (migration helper)
@@ -116,8 +111,8 @@ export const useInvestmentStore = create<InvestmentStore>()((set, get) => ({
       const data = await res.json();
 
       if (data.data && data.data.length > 0) {
-        // File has data — use it
-        set({ investments: data.data, hydrated: true });
+        // File has data — use it (filter soft-deleted tombstones)
+        set({ investments: (data.data as Investment[]).filter((inv) => !inv._deleted), hydrated: true });
         // Also sync to localStorage for offline resilience
         localStorage.setItem('investment-portfolio-store-backup', JSON.stringify(data.investments));
         return;
@@ -148,7 +143,7 @@ export const useInvestmentStore = create<InvestmentStore>()((set, get) => ({
   addInvestment: (investment) => {
     const updated = [
       ...get().investments,
-      { ...investment, id: Date.now().toString() },
+      { ...investment, id: crypto.randomUUID() },
     ];
     set({ investments: updated });
     saveToFile(updated);
@@ -163,8 +158,10 @@ export const useInvestmentStore = create<InvestmentStore>()((set, get) => ({
   },
 
   deleteInvestment: (id) => {
-    const updated = get().investments.filter((inv) => inv.id !== id);
-    set({ investments: updated });
-    saveToFile(updated);
+    const all = get().investments;
+    // In-memory: remove the item entirely (clean UI state)
+    set({ investments: all.filter((inv) => inv.id !== id) });
+    // File: keep as soft-deleted tombstone so mergeById never resurrects it
+    saveToFile(all.map((inv) => inv.id === id ? { ...inv, _deleted: true } : inv));
   },
 }));

@@ -3,14 +3,10 @@
 import { create } from 'zustand';
 import type { MoneyRecord } from './types';
 
-async function saveToFile(records: MoneyRecord[]) {
-  try {
-    await fetch('/api/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ section: 'money_records', data: records }),
-    });
-  } catch { /* silently fail */ }
+import { saveSection } from './saveHelper';
+
+function saveToFile(records: MoneyRecord[]) {
+  saveSection('money_records', records);
 }
 
 interface MoneyStore {
@@ -39,7 +35,7 @@ export const useMoneyStore = create<MoneyStore>()((set, get) => ({
   },
 
   addRecord: (record) => {
-    const updated = [...get().records, { ...record, id: Date.now().toString() }];
+    const updated = [...get().records, { ...record, id: crypto.randomUUID() }];
     set({ records: updated });
     saveToFile(updated);
   },
