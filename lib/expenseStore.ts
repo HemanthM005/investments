@@ -22,6 +22,18 @@ function adjustAccountBalance(accountId: string, delta: number) {
   updateAccount(accountId, { balance: account.balance + effectiveDelta });
 }
 
+// Apply balance changes for an expense (delta = -amount for spend, +amount for reversal).
+// If payment_sources is set, distribute across each source; otherwise use legacy payment_source_id.
+function adjustAllSources(expense: { payment_source_id: string; amount: number; payment_sources?: import('./types').PaymentSource[] }, delta: number) {
+  if (expense.payment_sources && expense.payment_sources.length > 0) {
+    for (const src of expense.payment_sources) {
+      if (src.account_id) adjustAccountBalance(src.account_id, delta < 0 ? -src.amount : src.amount);
+    }
+  } else {
+    adjustAccountBalance(expense.payment_source_id, delta);
+  }
+}
+
 interface ExpenseStore {
   expenses: Expense[];
   hydrated: boolean;
@@ -51,8 +63,7 @@ export const useExpenseStore = create<ExpenseStore>()((set, get) => ({
     const updated = [newExpense, ...get().expenses];
     set({ expenses: updated });
     saveToFile(updated);
-    // Deduct from linked account
-    adjustAccountBalance(expense.payment_source_id, -expense.amount);
+    adjustAllSources(expense, -expense.amount);
     return newExpense.id;
   },
 
@@ -60,14 +71,14 @@ export const useExpenseStore = create<ExpenseStore>()((set, get) => ({
     const old = get().expenses.find((e) => e.id === id);
     if (!old) return;
 
-    // 1. Reverse old effect on old account
-    adjustAccountBalance(old.payment_source_id, +old.amount);
+    // 1. Reverse old effect
+    adjustAllSources(old, +old.amount);
 
-    // 2. Compute the merged new expense
+    // 2. Compute merged
     const merged = { ...old, ...updates };
 
-    // 3. Apply new effect on (possibly different) account
-    adjustAccountBalance(merged.payment_source_id, -merged.amount);
+    // 3. Apply new effect
+    adjustAllSources(merged, -merged.amount);
 
     const updated = get().expenses.map((e) => (e.id === id ? merged : e));
     set({ expenses: updated });
@@ -76,8 +87,7 @@ export const useExpenseStore = create<ExpenseStore>()((set, get) => ({
 
   deleteExpense: (id) => {
     const exp = get().expenses.find((e) => e.id === id);
-    // Restore balance to linked account
-    if (exp) adjustAccountBalance(exp.payment_source_id, +exp.amount);
+    if (exp) adjustAllSources(exp, +exp.amount);
     const updated = get().expenses.filter((e) => e.id !== id);
     set({ expenses: updated });
     saveToFile(updated);
