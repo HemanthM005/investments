@@ -12,6 +12,7 @@ import {
 } from '@/lib/utils';
 import InvestmentModal from '@/components/InvestmentModal';
 import ResearchModal from '@/components/ResearchModal';
+import StockAnalysisDrawer from '@/components/StockAnalysisDrawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -55,7 +56,8 @@ export default function InvestmentsPage() {
   const [filterType, setFilterType] = useState('all');
   const [filterSector, setFilterSector] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [researchInv, setResearchInv] = useState<Investment | null>(null);
+  const [researchInv, setResearchInv]   = useState<Investment | null>(null);
+  const [analysisInv, setAnalysisInv]   = useState<Investment | null>(null);
 
   // Split active vs watchlist — must come before ticker memos
   const activeInvestments  = useMemo(() => investments.filter((inv) => inv.status !== 'watchlist'), [investments]);
@@ -451,14 +453,26 @@ export default function InvestmentsPage() {
                         )}
                       >
                         <TableCell className="font-medium text-slate-100 whitespace-nowrap">
-                          <button
-                            onClick={() => setResearchInv(inv)}
-                            className="flex items-center gap-1.5 hover:text-indigo-300 transition-colors group text-left"
-                            title="View research notes"
-                          >
-                            {inv.asset_name}
-                            <Info className={`h-3.5 w-3.5 flex-shrink-0 ${inv.research ? 'text-indigo-500 group-hover:text-indigo-300' : 'text-slate-600 group-hover:text-slate-400'}`} />
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                const canAnalyze = inv.ticker && (inv.asset_type === 'Stock' || inv.asset_type === 'ETF' || inv.asset_type === 'Crypto');
+                                if (canAnalyze) setAnalysisInv(inv);
+                                else setResearchInv(inv);
+                              }}
+                              className="hover:text-indigo-300 transition-colors text-left"
+                              title={inv.ticker ? 'View live analysis' : 'View research notes'}
+                            >
+                              {inv.asset_name}
+                            </button>
+                            <button
+                              onClick={() => setResearchInv(inv)}
+                              className="group"
+                              title="View research notes"
+                            >
+                              <Info className={`h-3.5 w-3.5 flex-shrink-0 ${inv.research ? 'text-indigo-500 group-hover:text-indigo-300' : 'text-slate-600 group-hover:text-slate-400'}`} />
+                            </button>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <span
@@ -716,6 +730,11 @@ export default function InvestmentsPage() {
       <ResearchModal
         investment={researchInv}
         onClose={() => setResearchInv(null)}
+      />
+
+      <StockAnalysisDrawer
+        investment={analysisInv}
+        onClose={() => setAnalysisInv(null)}
       />
     </div>
   );

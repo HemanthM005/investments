@@ -41,6 +41,16 @@ export type AssetCategory =
   | 'Recurring Deposit'
   | 'Other';
 
+export interface AccountTransaction {
+  id: string;
+  date: string;             // YYYY-MM-DD
+  type: 'credit' | 'debit';
+  amount: number;           // always positive
+  note: string;             // e.g. "June Salary", "HDFC CC Bill"
+  pairId?: string;          // shared ID linking two sides of a transfer
+  linkedAccountName?: string; // display name of the other account in a transfer
+}
+
 export interface AssetAccount {
   id: string;
   name: string;           // e.g. "SBI Savings", "HDFC FD — 7%"
@@ -50,6 +60,7 @@ export interface AssetAccount {
   maturity_date: string;  // for FD/RD etc., empty otherwise
   notes: string;
   last_updated: string;   // ISO date
+  transactions?: AccountTransaction[];  // running log; balance auto-updated on each entry
 }
 
 export type ExpenseCategory =
@@ -73,16 +84,24 @@ export interface ExpenseSplit {
   amount: number; // amount they owe you
 }
 
+export interface PaymentSource {
+  account_id: string;          // AssetAccount.id — empty means "other/untracked"
+  account_name: string;        // snapshot at time of entry
+  amount: number;              // how much was paid from this source
+}
+
 export interface Expense {
   id: string;
   date: string;              // ISO date YYYY-MM-DD
   amount: number;
   category: ExpenseCategory;
-  payment_source_id: string;   // AssetAccount.id — empty means "other/untracked"
-  payment_source_name: string; // snapshot of account name at time of entry
+  payment_source_id: string;   // legacy / primary source (kept for backward compat)
+  payment_source_name: string; // legacy / primary source name snapshot
   description: string;
   notes: string;
   splits?: ExpenseSplit[];
+  paid_by_name?: string;             // if set, this person paid (not "me") — triggers borrowed record in Money Tracker
+  payment_sources?: PaymentSource[]; // multi-source payment; when set, takes precedence over payment_source_id
 }
 
 export type RecurringFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'Quarterly' | 'Yearly';
