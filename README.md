@@ -1,16 +1,38 @@
-# 📈 Personal Investment Portfolio Dashboard
+# 📈 Personal Finance Dashboard
 
-A modern, dark-themed investment portfolio tracker built for the Indian stock market. Track your investments, view analytics, and access curated research reports — all locally in your browser.
+A modern, dark-themed personal finance dashboard for the Indian market. Track investments, daily expenses, cash accounts, money lent/borrowed, and subscriptions — all in one place, all stored locally.
 
 ## Features
 
+### Investments
 - **Portfolio Dashboard** — Total invested, current value, P&L, best/worst performers, risk alerts
 - **Investment Tracker** — Full CRUD table with filters, add/edit/delete via modal
+- **Real-time Prices** — Live price updates for stocks (Yahoo Finance), crypto (CoinGecko), and mutual funds (AMFI)
+- **Stock Comparison** — Side-by-side radar chart comparison across key metrics
+- **AI Stock Analysis** — Research drawer with AI-powered analysis per stock
 - **Interactive Charts** — Portfolio allocation (pie), sector distribution (bar), P&L by asset (bar)
-- **Risk Indicators** — Alerts for >20% loss, >50% gain, and >40% concentration risk
-- **India Sectors Report** — Research report covering Defence, Solar, EVs, Green Hydrogen, Space & Deep Tech
-- **₹3 Lakh Investment Plan** — Step-by-step guide to investing ₹3 lakhs in India (March 2026 context)
-- **LocalStorage persistence** — All data saved locally, no backend needed
+- **Risk Indicators** — Alerts for >20% loss, >50% gain, and >40% concentration
+
+### Expenses
+- **Daily Expense Tracker** — Log expenses with category, account, and notes
+- **Split Bills** — Split any expense across multiple people (equal, by %, by shares, or custom ₹)
+- **Who Paid** — Track when someone else paid; auto-creates "you owe them" record in Money Tracker
+- **Multi-account Payment** — Split a single expense across multiple accounts
+- **Category Breakdown** — Monthly spend by category with "my share" vs total
+
+### Cash & Accounts
+- **Account Manager** — Track balances across savings, FD, credit cards, wallets, PPF, EPF, NPS, etc.
+- **Auto Balance Updates** — Expenses auto-deduct from linked accounts
+- **Transaction History** — Full ledger per account
+- **Transfers** — Move money between accounts with paired transaction entries
+
+### Money Tracker
+- **Lent / Borrowed** — Track money given to or taken from people
+- **Net Balance per Person** — One card per person combining all lent + borrowed records; net determines which column they appear in
+- **Split Linkage** — Expense splits automatically create money records; editing/deleting syncs both
+
+### Subscriptions
+- **Recurring Expenses** — Track monthly/yearly subscriptions with next due date
 
 ## Tech Stack
 
@@ -20,7 +42,8 @@ A modern, dark-themed investment portfolio tracker built for the Indian stock ma
 | Language | TypeScript |
 | Styling | TailwindCSS |
 | Charts | Recharts |
-| State | Zustand + localStorage |
+| State | Zustand |
+| Persistence | Server-side JSON file via API routes |
 | UI Primitives | Radix UI |
 | Icons | lucide-react |
 
@@ -40,55 +63,37 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 | Route | Description |
 |-------|-------------|
-| `/` | Main portfolio dashboard with charts and analytics |
-| `/investments` | Interactive investment tracker (Add / Edit / Delete) |
+| `/` | Portfolio dashboard with charts and analytics |
+| `/investments` | Investment CRUD tracker with real-time prices and AI research |
+| `/compare` | Side-by-side stock comparison with radar chart |
+| `/expenses` | Daily expense tracker with bill splitting |
+| `/cash-accounts` | Cash & account manager with transaction history |
+| `/money-tracker` | Track money lent and borrowed, net per person |
+| `/subscriptions` | Recurring subscription tracker |
 | `/india-sectors-report` | India emerging sectors investment research report |
 | `/invest-3-lakhs-plan` | How to invest ₹3 lakhs guide |
 
-## Data Model
+## Data Storage
 
-```typescript
-interface Investment {
-  id: string;
-  asset_name: string;
-  asset_type: 'Stock' | 'ETF' | 'Crypto' | 'Mutual Fund' | 'Gold' | 'Other';
-  sector: string;
-  buy_price: number;
-  current_price: number;
-  quantity: number;
-  purchase_date: string;
-  notes: string;
-}
-```
+All data is stored in `data/portfolio.json` (gitignored — never committed). Sections:
 
-Data is stored in `localStorage` under the key `investment-portfolio-store`. To reset to sample data, clear that key in your browser's DevTools.
+| Section | Contents |
+|---------|----------|
+| `investments` | Your investment holdings |
+| `expenses` | Daily expense entries |
+| `money_records` | Lent/borrowed records |
+| `accounts` | Cash & account balances |
+| `recurring_expenses` | Subscription entries |
 
-## Screenshots
-
-The app uses a dark dashboard theme:
-- Background: `#0f1117`
-- Cards: `#1a1d2e`
-- Gains highlighted in emerald green
-- Losses highlighted in red
-- Primary accent: indigo/purple
+To reset data, delete `data/portfolio.json` — it will be recreated from `data/portfolio.example.json` on next load.
 
 ## Risk Indicators
 
 | Condition | Indicator |
 |-----------|-----------|
-| P&L < -20% | Row highlighted red + alert banner |
-| P&L > +50% | Row highlighted green + alert banner |
-| Single asset > 40% of portfolio | Amber concentration risk warning |
-
-## Sample Data
-
-Six sample investments are pre-loaded on first launch:
-- HAL (Defence stock)
-- Tata Power (Solar/Renewables)
-- Nippon India Gold ETF (Gold)
-- Parag Parikh Flexi Cap (Mutual Fund)
-- Nifty BeES (ETF)
-- Bajaj Auto (EV stock — showing a loss for risk indicator demo)
+| P&L < -20% | Row highlighted red |
+| P&L > +50% | Row highlighted green |
+| Single asset > 40% of portfolio | Amber concentration warning |
 
 ## Disclaimer
 

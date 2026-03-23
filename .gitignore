@@ -5,9 +5,9 @@ node_modules/
 .next/
 out/
 
-# Data — all real data files are private, only the example is tracked
-data/*.json
-data/*.json.bak*
+# Data — ALL data files are private; only the example is tracked
+# NEVER remove these rules — portfolio.json contains real personal financial data
+data/
 !data/portfolio.example.json
 
 # Environment variables
