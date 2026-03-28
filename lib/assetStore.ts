@@ -59,10 +59,7 @@ export const useAssetStore = create<AssetStore>()((set, get) => ({
     const linkedAccount = linkedAccountId ? accounts.find((a) => a.id === linkedAccountId) : undefined;
 
     function applyTx(a: AssetAccount, type: 'credit' | 'debit', note: string, partnerName?: string): AssetAccount {
-      const isCreditCard = a.category === 'Credit Card';
-      const balanceDelta = isCreditCard
-        ? (type === 'credit' ? -tx.amount : tx.amount)
-        : (type === 'credit' ?  tx.amount : -tx.amount);
+      const balanceDelta = type === 'credit' ? tx.amount : -tx.amount;
       const newTx: AccountTransaction = {
         id: crypto.randomUUID(), date: tx.date, type, amount: tx.amount,
         note, pairId, ...(partnerName ? { linkedAccountName: partnerName } : {}),
@@ -112,11 +109,8 @@ export const useAssetStore = create<AssetStore>()((set, get) => ({
 
       // Reverse balance for each removed tx
       let balanceDelta = 0;
-      const isCreditCard = a.category === 'Credit Card';
       for (const t of removedTxs) {
-        balanceDelta += isCreditCard
-          ? (t.type === 'credit' ? t.amount : -t.amount)
-          : (t.type === 'credit' ? -t.amount : t.amount);
+        balanceDelta += t.type === 'credit' ? -t.amount : t.amount;
       }
 
       return {
@@ -133,6 +127,5 @@ export const useAssetStore = create<AssetStore>()((set, get) => ({
 export function getTotalBalance(accounts: AssetAccount[]) {
   // Credit card balance = amount you OWE (positive number = liability)
   // so it subtracts from net worth; all other accounts add to it
-  return accounts.reduce((sum, a) =>
-    a.category === 'Credit Card' ? sum - a.balance : sum + a.balance, 0);
+  return accounts.reduce((sum, a) => sum + a.balance, 0);
 }

@@ -62,6 +62,10 @@ function appendAudit(file: PortfolioData, entry: AuditEntry) {
   file.audit_log = [...(file.audit_log ?? []), entry].slice(-MAX_AUDIT);
 }
 
+// Sections where mergeById is used (investments only).
+// All other sections use plain overwrite so deletes always take effect.
+const MERGE_SECTIONS = new Set(['investments']);
+
 // Merge incoming array with existing array by id:
 // - Preserves extra fields on existing items absent from incoming (e.g. `research`)
 // - Appends file-only items not in incoming, UNLESS they are soft-deleted (_deleted:true)
@@ -124,7 +128,9 @@ export async function POST(req: Request) {
       for (const [sec, data] of Object.entries(sections)) {
         if (sec in EMPTY && sec !== 'audit_log') {
           const existing = (file as Record<string, unknown>)[sec] as unknown[];
-          (file as Record<string, unknown>)[sec] = mergeById(existing ?? [], data ?? []);
+          (file as Record<string, unknown>)[sec] = MERGE_SECTIONS.has(sec)
+            ? mergeById(existing ?? [], data ?? [])
+            : (data ?? []);
           changed.push(sec);
         }
       }
@@ -140,7 +146,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, error: 'Unknown section' }, { status: 400 });
       }
       const existing = (file as Record<string, unknown>)[section] as unknown[];
-      (file as Record<string, unknown>)[section] = mergeById(existing ?? [], data ?? []);
+      (file as Record<string, unknown>)[section] = MERGE_SECTIONS.has(section)
+        ? mergeById(existing ?? [], data ?? [])
+        : data ?? [];
       appendAudit(file, {
         ts: new Date().toISOString(),
         action: action ?? 'update',

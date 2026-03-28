@@ -186,9 +186,7 @@ function TransactionModal({ account, defaultType, allAccounts, existingPeople, o
   const debitLabel  = isCreditCard ? 'New Charge'   : 'Money Out (−)';
 
   const newBalance = (a: AssetAccount, t: 'credit' | 'debit') =>
-    a.category === 'Credit Card'
-      ? a.balance + (t === 'credit' ? -amt : amt)
-      : a.balance + (t === 'credit' ? amt  : -amt);
+    a.balance + (t === 'credit' ? amt : -amt);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -438,7 +436,11 @@ function TransferModal({ allAccounts, onClose, onTransfer }: {
                     <SelectItem key={a.id} value={a.id} disabled={a.id === toId}>
                       <div className="flex items-center justify-between gap-2 w-full">
                         <span className="truncate">{a.name}</span>
-                        <span className="text-xs text-slate-500 flex-shrink-0">{formatCurrency(a.balance)}</span>
+                        <span className={`text-xs flex-shrink-0 ${a.category === 'Credit Card' && a.balance < 0 ? 'text-red-400' : 'text-slate-500'}`}>
+                          {a.category === 'Credit Card' && a.balance < 0
+                            ? `−${formatCurrency(Math.abs(a.balance))} owed`
+                            : formatCurrency(a.balance)}
+                        </span>
                       </div>
                     </SelectItem>
                   ))}
@@ -455,7 +457,11 @@ function TransferModal({ allAccounts, onClose, onTransfer }: {
                     <SelectItem key={a.id} value={a.id} disabled={a.id === fromId}>
                       <div className="flex items-center justify-between gap-2 w-full">
                         <span className="truncate">{a.name}</span>
-                        <span className="text-xs text-slate-500 flex-shrink-0">{formatCurrency(a.balance)}</span>
+                        <span className={`text-xs flex-shrink-0 ${a.category === 'Credit Card' && a.balance < 0 ? 'text-red-400' : 'text-slate-500'}`}>
+                          {a.category === 'Credit Card' && a.balance < 0
+                            ? `−${formatCurrency(Math.abs(a.balance))} owed`
+                            : formatCurrency(a.balance)}
+                        </span>
                       </div>
                     </SelectItem>
                   ))}
@@ -501,9 +507,7 @@ function TransferModal({ allAccounts, onClose, onTransfer }: {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">{to.name}</span>
-                <span className="font-bold text-emerald-400">
-                  {formatCurrency(to.category === 'Credit Card' ? to.balance - amt : to.balance + amt)}
-                </span>
+                <span className="font-bold text-emerald-400">{formatCurrency(to.balance + amt)}</span>
               </div>
             </div>
           )}
@@ -534,8 +538,8 @@ function AccountCard({ account, monthlySpend, txCount, onEdit, onDelete, onAddTx
   const [showHistory, setShowHistory] = useState(false);
   const meta         = CATEGORY_META[account.category];
   const isCreditCard = account.category === 'Credit Card';
-  const isOwed       = isCreditCard && account.balance > 0;
-  const isCredit     = isCreditCard && account.balance < 0;
+  const isOwed       = isCreditCard && account.balance < 0;
+  const isCredit     = isCreditCard && account.balance > 0;
   const txList       = account.transactions ?? [];
 
   return (
@@ -556,8 +560,8 @@ function AccountCard({ account, monthlySpend, txCount, onEdit, onDelete, onAddTx
           </div>
           <div className="text-right">
             <p className={`text-lg font-bold ${isOwed ? 'text-red-400' : isCredit ? 'text-emerald-400' : 'text-slate-100'}`}>
-              {isOwed   ? `−${formatCurrency(account.balance)}`
-               : isCredit ? `+${formatCurrency(Math.abs(account.balance))}`
+              {isOwed   ? `−${formatCurrency(Math.abs(account.balance))}`
+               : isCredit ? `+${formatCurrency(account.balance)}`
                : formatCurrency(account.balance)}
             </p>
             {isOwed   && <p className="text-xs text-red-400/70">amount owed</p>}
@@ -687,7 +691,7 @@ export default function CashAccountsPage() {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const total        = useMemo(() => getTotalBalance(accounts), [accounts]);
   const liquidAssets = useMemo(() => accounts.filter((a) => a.category !== 'Credit Card').reduce((s, a) => s + a.balance, 0), [accounts]);
-  const ccDebt       = useMemo(() => accounts.filter((a) => a.category === 'Credit Card' && a.balance > 0).reduce((s, a) => s + a.balance, 0), [accounts]);
+  const ccDebt       = useMemo(() => accounts.filter((a) => a.category === 'Credit Card' && a.balance < 0).reduce((s, a) => s + Math.abs(a.balance), 0), [accounts]);
 
   const byCategory = useMemo(() => {
     const map: Partial<Record<AssetCategory, number>> = {};

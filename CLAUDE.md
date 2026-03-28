@@ -9,6 +9,10 @@
 
 If you find a sensitive file tracked by git: run `git rm --cached <file>` immediately, add it to `.gitignore`, then commit the fix before anything else.
 
+**NEVER directly modify `data/portfolio.json` or any file whose name contains `portfolio.json`** — not via shell commands, not via Node scripts, not via migrations baked into app code (e.g. inside `hydrate()`). This applies every session without exception.
+
+If the user explicitly asks to modify the file, stop and ask: **"Are you sure you want me to directly modify portfolio.json?"** before doing anything.
+
 The only data file that should ever be committed is `data/portfolio.example.json`.
 
 ---

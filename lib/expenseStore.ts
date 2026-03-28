@@ -18,8 +18,7 @@ function adjustAccountBalance(accountId: string, delta: number) {
   const { accounts, updateAccount } = useAssetStore.getState();
   const account = accounts.find((a) => a.id === accountId);
   if (!account) return;
-  const effectiveDelta = account.category === 'Credit Card' ? -delta : delta;
-  updateAccount(accountId, { balance: account.balance + effectiveDelta });
+  updateAccount(accountId, { balance: account.balance + delta });
 }
 
 // Apply balance changes for an expense (delta = -amount for spend, +amount for reversal).

@@ -15,11 +15,26 @@ export default function HydrationProvider({ children }: { children: React.ReactN
   const hydrateRecurring   = useRecurringStore((s) => s.hydrate);
 
   useEffect(() => {
-    hydrateInvestments();
-    hydrateMoney();
-    hydrateAssets();
-    hydrateExpenses();
-    hydrateRecurring();
+    async function init() {
+      await Promise.all([
+        hydrateInvestments(),
+        hydrateMoney(),
+        hydrateAssets(),
+        hydrateExpenses(),
+        hydrateRecurring(),
+      ]);
+
+      // Remove money records linked to expenses that no longer exist (orphan cleanup).
+      // This handles cases where an expense was deleted directly from the file without
+      // going through the UI delete button (which normally cleans up linked records).
+      const expenses = useExpenseStore.getState().expenses;
+      const expenseIds = new Set(expenses.map((e) => e.id));
+      const { records, deleteRecord } = useMoneyStore.getState();
+      records
+        .filter((r) => r.source_expense_id && !expenseIds.has(r.source_expense_id))
+        .forEach((r) => deleteRecord(r.id));
+    }
+    init();
   }, [hydrateInvestments, hydrateMoney, hydrateAssets, hydrateExpenses, hydrateRecurring]);
 
   return <>{children}</>;
