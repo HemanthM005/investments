@@ -26,6 +26,7 @@ export interface MoneyRecord {
   description: string;
   status: 'pending' | 'partial' | 'settled';
   source_expense_id?: string;   // links back to the Expense that created this record via a split
+  account_id?: string;          // AssetAccount.id — account debited (lent) or credited (borrowed) when record was created
 }
 
 export type AssetCategory =
@@ -127,4 +128,24 @@ export interface PortfolioStats {
   pnlPercent: number;
   bestAsset: Investment | null;
   worstAsset: Investment | null;
+}
+
+export type HabitCategory = 'Health' | 'Fitness' | 'Productivity' | 'Learning' | 'Mindfulness' | 'Other';
+
+export interface Habit {
+  id: string;
+  name: string;
+  category: HabitCategory;
+  emoji: string;      // e.g. "💧", "📚"
+  color: string;      // hex color e.g. "#6366f1"
+  created_at: string; // YYYY-MM-DD
+  active: boolean;
+  type?: 'good' | 'bad' | 'count'; // good = to-do, bad = to-avoid, count = track daily occurrences
+  target_count?: number;            // for type='count': max allowed per day (e.g. 3)
+}
+
+export interface HabitLog {
+  habit_id: string;
+  date: string;    // YYYY-MM-DD
+  count?: number;  // for type='count' habits; undefined for boolean habits
 }

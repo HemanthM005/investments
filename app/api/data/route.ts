@@ -33,7 +33,13 @@ const EMPTY: PortfolioData = {
 function readFile(): PortfolioData {
   try {
     if (!fs.existsSync(FILE)) return { ...EMPTY };
-    return { ...EMPTY, ...JSON.parse(fs.readFileSync(FILE, 'utf-8')) };
+    const parsed = JSON.parse(fs.readFileSync(FILE, 'utf-8'));
+    // Only pick known keys so stale/migrated sections are silently dropped on next write
+    const result = { ...EMPTY };
+    for (const key of Object.keys(EMPTY) as (keyof PortfolioData)[]) {
+      if (key in parsed) (result as Record<string, unknown>)[key] = parsed[key];
+    }
+    return result;
   } catch {
     return { ...EMPTY };
   }
