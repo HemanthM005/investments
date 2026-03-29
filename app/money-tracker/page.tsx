@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { Plus, Pencil, Trash2, CheckCircle, Clock, AlertCircle, HandCoins } from 'lucide-react';
 import { useMoneyStore, getOutstandingLent, getOutstandingBorrowed } from '@/lib/moneyStore';
 import { useExpenseStore } from '@/lib/expenseStore';
+import { useAssetStore } from '@/lib/assetStore';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { MoneyRecord } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { MoneyRecord, AssetAccount } from '@/lib/types';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -43,6 +45,7 @@ const EMPTY_FORM: Omit<MoneyRecord, 'id'> = {
   due_date: '',
   description: '',
   status: 'pending',
+  account_id: '',
 };
 
 function MoneyModal({
@@ -50,11 +53,13 @@ function MoneyModal({
   onClose,
   onSubmit,
   initial,
+  accounts,
 }: {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: Omit<MoneyRecord, 'id'>) => void;
   initial?: MoneyRecord | null;
+  accounts: AssetAccount[];
 }) {
   const [form, setForm] = useState<Omit<MoneyRecord, 'id'>>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -204,6 +209,30 @@ function MoneyModal({
                 value={form.due_date}
                 onChange={(e) => set('due_date', e.target.value)}
               />
+            </div>
+
+            <div className="col-span-2 space-y-1.5">
+              <Label>
+                {form.type === 'lent' ? 'Paid From Account' : 'Received Into Account'}
+                <span className="text-slate-500 text-xs ml-1">(optional)</span>
+              </Label>
+              <Select
+                value={form.account_id || '__none__'}
+                onValueChange={(v) => set('account_id', v === '__none__' ? '' : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="No account / cash" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No account / cash</SelectItem>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                      <span className="text-slate-500 text-xs ml-2">{formatCurrency(a.balance)}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="col-span-2 space-y-1.5">
@@ -496,10 +525,34 @@ function PersonGroup({
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
+// Adjust the linked account balance when a money record is created or deleted.
+// Uses addTransaction so the entry appears in Cash & Accounts history.
+// lent = debit (money leaves), borrowed = credit (money arrives).
+function adjustAccountForRecord(
+  record: Omit<MoneyRecord, 'id'> | MoneyRecord,
+  reverse = false,
+) {
+  if (!record.account_id) return;
+  const { addTransaction } = useAssetStore.getState();
+  const baseType: 'credit' | 'debit' = record.type === 'lent' ? 'debit' : 'credit';
+  const txType: 'credit' | 'debit' = reverse
+    ? (baseType === 'debit' ? 'credit' : 'debit')
+    : baseType;
+  const action = record.type === 'lent' ? 'Lent to' : 'Borrowed from';
+  const note = `${reverse ? 'Reversal — ' : ''}${action} ${record.person_name}${record.description ? ` — ${record.description}` : ''}`;
+  addTransaction(record.account_id, {
+    date: record.date,
+    type: txType,
+    amount: record.amount,
+    note,
+  });
+}
+
 export default function MoneyTrackerPage() {
   const { records, addRecord, updateRecord, deleteRecord, markSettled } = useMoneyStore();
   const updateExpense = useExpenseStore((s) => s.updateExpense);
   const expenses = useExpenseStore((s) => s.expenses);
+  const accounts = useAssetStore((s) => s.accounts);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<MoneyRecord | null>(null);
   const [settleTarget, setSettleTarget] = useState<MoneyRecord | null>(null);
@@ -554,9 +607,15 @@ export default function MoneyTrackerPage() {
       }
     } else {
       addRecord(data);
+      adjustAccountForRecord(data);
     }
     setModalOpen(false);
     setEditTarget(null);
+  };
+
+  const handleDelete = (r: MoneyRecord) => {
+    adjustAccountForRecord(r, /* reverse */ true);
+    deleteRecord(r.id);
   };
 
   return (
@@ -650,7 +709,7 @@ export default function MoneyTrackerPage() {
                     name={name}
                     records={recs}
                     onEdit={(r) => { setEditTarget(r); setModalOpen(true); }}
-                    onDelete={(r) => deleteRecord(r.id)}
+                    onDelete={(r) => handleDelete(r)}
                     onSettle={(r) => setSettleTarget(r)}
                   />
                 ))
@@ -678,7 +737,7 @@ export default function MoneyTrackerPage() {
                     name={name}
                     records={recs}
                     onEdit={(r) => { setEditTarget(r); setModalOpen(true); }}
-                    onDelete={(r) => deleteRecord(r.id)}
+                    onDelete={(r) => handleDelete(r)}
                     onSettle={(r) => setSettleTarget(r)}
                   />
                 ))
@@ -693,6 +752,7 @@ export default function MoneyTrackerPage() {
         onClose={() => { setModalOpen(false); setEditTarget(null); }}
         onSubmit={handleSubmit}
         initial={editTarget}
+        accounts={accounts}
       />
 
       {settleTarget && (
