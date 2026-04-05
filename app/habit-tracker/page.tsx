@@ -333,14 +333,13 @@ function TodayPanel({ habits, logs, viewDate, today, onPrev, onNext, onToggle, o
                 return (
                   <div key={h.id} className={cn(
                     'group relative flex items-center gap-3 rounded-xl px-4 py-3 border transition-all',
-                    !hasStarted ? 'border-[#2a2d3e] bg-[#0f1117]'
-                    : overLimit ? 'border-red-700/50 bg-red-950/20'
+                    overLimit ? 'border-red-700/50 bg-red-950/20'
                     : 'border-emerald-700/50 bg-emerald-950/20'
                   )}>
                     {/* Emoji icon */}
                     <div
                       className="h-9 w-9 rounded-lg flex items-center justify-center text-lg shrink-0"
-                      style={{ backgroundColor: hasStarted ? h.color + '33' : '#1a1d2e' }}
+                      style={{ backgroundColor: h.color + '33' }}
                     >
                       {h.emoji}
                     </div>
@@ -352,10 +351,10 @@ function TodayPanel({ habits, logs, viewDate, today, onPrev, onNext, onToggle, o
                         <p className="text-sm font-medium text-slate-200 truncate">{h.name}</p>
                       </div>
                       <p className="text-xs mt-0.5">
-                        {!hasStarted
-                          ? <span className="text-slate-500">Limit: {target}/day · tap + to start</span>
-                          : overLimit
-                            ? <span className="text-red-400">✗ Over limit by {count - target}</span>
+                        {overLimit
+                          ? <span className="text-red-400">✗ Over limit by {count - target}</span>
+                          : count === 0
+                            ? <span className="text-emerald-400">✓ Under limit · tap + to count</span>
                             : <span className="text-emerald-400">✓ Under limit ({target - count} remaining)</span>
                         }
                       </p>
@@ -387,9 +386,7 @@ function TodayPanel({ habits, logs, viewDate, today, onPrev, onNext, onToggle, o
                       <div className="min-w-[44px] text-center">
                         <span className={cn(
                           'text-lg font-bold leading-none',
-                          !hasStarted ? 'text-slate-600'
-                          : overLimit ? 'text-red-400'
-                          : 'text-emerald-400'
+                          overLimit ? 'text-red-400' : 'text-emerald-400'
                         )}>{count}</span>
                         <span className="text-[10px] text-slate-600 block leading-none">/{target}</span>
                       </div>
@@ -540,7 +537,7 @@ function MonthlyGrid({ habits, logs, year, month, today, onToggle, onSetCount }:
               const isBad = h.type === 'bad';
               const streak = getStreak(h, logs);
               const pct = habitPct(h);
-              const count = days.filter((d) => isDoneOnDate(h, ds(d), logs)).length;
+              const count = days.filter((d) => !isFuture(d) && isDoneOnDate(h, ds(d), logs)).length;
 
               return (
                 <tr key={h.id} className={hi % 2 === 0 ? 'bg-[#0f1117]/40' : ''}>
@@ -572,7 +569,7 @@ function MonthlyGrid({ habits, logs, year, month, today, onToggle, onSetCount }:
                             : cnt === 0 ? (todayCell ? 'bg-indigo-900/30 border border-indigo-700/50 text-slate-600' : 'bg-[#1a1d2e] text-slate-700')
                             : over ? 'text-white' : 'text-white',
                           )} style={cnt > 0 ? { backgroundColor: over ? '#f43f5e' : h.color } : {}}>
-                            {cnt > 0 ? cnt : ''}
+                            {!future ? (cnt > 0 ? cnt : '0') : ''}
                           </div>
                         </td>
                       );
@@ -909,11 +906,11 @@ export default function HabitTrackerPage() {
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 bg-[#1a1d2e] border border-[#2a2d3e] rounded-lg px-1 py-1">
-            <Button variant="ghost" size="icon" onClick={prevMonth} className="h-7 w-7 text-slate-400 hover:text-slate-200">
+            <Button type="button" variant="ghost" size="icon" onClick={prevMonth} className="h-7 w-7 text-slate-400 hover:text-slate-200">
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm font-semibold text-slate-200 px-3 min-w-[140px] text-center">{monthLabel}</span>
-            <Button variant="ghost" size="icon" onClick={nextMonth} className="h-7 w-7 text-slate-400 hover:text-slate-200">
+            <Button type="button" variant="ghost" size="icon" onClick={nextMonth} className="h-7 w-7 text-slate-400 hover:text-slate-200">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -987,7 +984,18 @@ export default function HabitTrackerPage() {
 
       {/* Monthly grid */}
       <div>
-        <h2 className="text-sm font-semibold text-slate-400 mb-2 uppercase tracking-wider">Monthly View — {monthLabel}</h2>
+        <div className="flex items-center gap-2 mb-2">
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Monthly View</h2>
+          <div className="flex items-center gap-1 bg-[#1a1d2e] border border-[#2a2d3e] rounded-lg px-1 py-0.5">
+            <button type="button" onClick={prevMonth} className="p-0.5 rounded hover:bg-[#2a2d3e] text-slate-400 hover:text-slate-100 transition-colors">
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <span className="text-xs font-semibold text-slate-200 px-2 min-w-[110px] text-center">{monthLabel}</span>
+            <button type="button" onClick={nextMonth} className="p-0.5 rounded hover:bg-[#2a2d3e] text-slate-400 hover:text-slate-100 transition-colors">
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
         <MonthlyGrid
           habits={habits} logs={logs}
           year={viewYear} month={viewMonth}

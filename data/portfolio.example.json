@@ -9,7 +9,9 @@
       "current_price": 4100,
       "quantity": 10,
       "purchase_date": "2024-06-15",
-      "notes": "Strong order book, Atmanirbhar push"
+      "notes": "Strong order book, Atmanirbhar push",
+      "ticker": "HAL.NS",
+      "status": "active"
     },
     {
       "id": "2",
@@ -20,7 +22,9 @@
       "current_price": 82,
       "quantity": 500,
       "purchase_date": "2023-11-20",
-      "notes": "SIP — global + India mix"
+      "notes": "SIP — global + India mix",
+      "ticker": "122639",
+      "status": "active"
     },
     {
       "id": "3",
@@ -31,7 +35,64 @@
       "current_price": 7200,
       "quantity": 5,
       "purchase_date": "2024-01-10",
-      "notes": "Gold hedge"
+      "notes": "Gold hedge against inflation",
+      "ticker": "GOLDBEES.NS",
+      "status": "active"
+    },
+    {
+      "id": "4",
+      "asset_name": "Bitcoin",
+      "asset_type": "Crypto",
+      "sector": "Crypto",
+      "buy_price": 2800000,
+      "current_price": 7200000,
+      "quantity": 0.005,
+      "purchase_date": "2023-01-15",
+      "notes": "Long-term hold, DCA strategy",
+      "ticker": "bitcoin",
+      "status": "active"
+    },
+    {
+      "id": "5",
+      "asset_name": "Nifty 50 Index Fund",
+      "asset_type": "ETF",
+      "sector": "Diversified",
+      "buy_price": 210,
+      "current_price": 248,
+      "quantity": 200,
+      "purchase_date": "2024-03-01",
+      "notes": "Core passive allocation",
+      "ticker": "NIFTYBEES.NS",
+      "status": "active"
+    },
+    {
+      "id": "6",
+      "asset_name": "Dixon Technologies",
+      "asset_type": "Stock",
+      "sector": "Electronics Manufacturing",
+      "buy_price": 0,
+      "current_price": 14200,
+      "quantity": 0,
+      "purchase_date": "",
+      "notes": "PLI beneficiary, strong execution track record",
+      "ticker": "DIXON.NS",
+      "status": "watchlist",
+      "buy_range": "12000-13500",
+      "research": "Dixon is India's largest contract electronics manufacturer. Key thesis:\n- Direct PLI scheme beneficiary for mobile and IT hardware\n- Expanding into washing machines, LED TVs, laptops\n- Marquee clients: Samsung, Xiaomi, Motorola, HP\n- Management has consistently delivered on guidance\n\nRisks: Customer concentration, margin compression from competition, global supply chain disruptions."
+    },
+    {
+      "id": "7",
+      "asset_name": "Zomato",
+      "asset_type": "Stock",
+      "sector": "Consumer Tech",
+      "buy_price": 0,
+      "current_price": 225,
+      "quantity": 0,
+      "purchase_date": "",
+      "notes": "Watching for profitability inflection + Blinkit scale-up",
+      "ticker": "ZOMATO.NS",
+      "status": "watchlist",
+      "buy_range": "180-200"
     }
   ],
   "money_records": [
@@ -40,11 +101,33 @@
       "type": "lent",
       "person_name": "Rahul",
       "amount": 5000,
-      "settled_amount": 0,
+      "settled_amount": 2000,
       "date": "2024-12-01",
       "due_date": "2025-03-01",
-      "description": "Borrowed for medical",
+      "description": "Borrowed for medical emergency",
+      "status": "partial"
+    },
+    {
+      "id": "2",
+      "type": "borrowed",
+      "person_name": "Priya",
+      "amount": 1200,
+      "settled_amount": 0,
+      "date": "2025-02-14",
+      "due_date": "",
+      "description": "Valentine's dinner, she covered my share",
       "status": "pending"
+    },
+    {
+      "id": "3",
+      "type": "lent",
+      "person_name": "Karan",
+      "amount": 800,
+      "settled_amount": 800,
+      "date": "2025-01-10",
+      "due_date": "2025-01-31",
+      "description": "Petrol money",
+      "status": "settled"
     }
   ],
   "accounts": [
@@ -56,7 +139,8 @@
       "interest_rate": 2.7,
       "maturity_date": "",
       "notes": "Primary salary account",
-      "last_updated": "2025-03-01"
+      "last_updated": "2026-03-01",
+      "transactions": []
     },
     {
       "id": "2",
@@ -66,7 +150,8 @@
       "interest_rate": 42,
       "maturity_date": "",
       "notes": "Due date: 5th of every month",
-      "last_updated": "2025-03-01"
+      "last_updated": "2026-03-01",
+      "transactions": []
     },
     {
       "id": "3",
@@ -76,28 +161,145 @@
       "interest_rate": 0,
       "maturity_date": "",
       "notes": "",
-      "last_updated": "2025-03-01"
+      "last_updated": "2026-03-01",
+      "transactions": []
+    },
+    {
+      "id": "4",
+      "name": "SBI Fixed Deposit",
+      "category": "Fixed Deposit",
+      "balance": 100000,
+      "interest_rate": 7.1,
+      "maturity_date": "2026-03-15",
+      "notes": "Auto-renew enabled",
+      "last_updated": "2026-03-01",
+      "transactions": []
     }
   ],
   "expenses": [
     {
       "id": "1",
-      "date": "2025-03-19",
+      "date": "2026-04-01",
       "amount": 250,
       "category": "Food & Dining",
-      "payment_source_id": "",
-      "payment_source_name": "Other",
+      "payment_source_id": "3",
+      "payment_source_name": "Wallet Cash",
       "description": "Lunch at office canteen",
       "notes": ""
     },
     {
       "id": "2",
-      "date": "2025-03-18",
-      "amount": 150,
+      "date": "2026-04-01",
+      "amount": 180,
       "category": "Transport",
-      "payment_source_id": "",
-      "payment_source_name": "Other",
-      "description": "Uber to metro",
+      "payment_source_id": "1",
+      "payment_source_name": "SBI Savings",
+      "description": "Uber to office",
+      "notes": ""
+    },
+    {
+      "id": "3",
+      "date": "2026-03-31",
+      "amount": 1800,
+      "category": "Food & Dining",
+      "payment_source_id": "2",
+      "payment_source_name": "HDFC Credit Card",
+      "description": "Team dinner",
+      "notes": "Split 3 ways",
+      "splits": [
+        { "person_name": "Rahul", "amount": 600 },
+        { "person_name": "Karan", "amount": 600 }
+      ]
+    },
+    {
+      "id": "4",
+      "date": "2026-03-29",
+      "amount": 499,
+      "category": "Health & Medical",
+      "payment_source_id": "2",
+      "payment_source_name": "HDFC Credit Card",
+      "description": "Gym monthly membership",
+      "notes": ""
+    },
+    {
+      "id": "5",
+      "date": "2026-03-28",
+      "amount": 3200,
+      "category": "Shopping",
+      "payment_source_id": "2",
+      "payment_source_name": "HDFC Credit Card",
+      "description": "New running shoes",
+      "notes": "Nike Air Zoom"
+    },
+    {
+      "id": "6",
+      "date": "2026-03-28",
+      "amount": 85,
+      "category": "Food & Dining",
+      "payment_source_id": "3",
+      "payment_source_name": "Wallet Cash",
+      "description": "Evening chai + snacks",
+      "notes": ""
+    },
+    {
+      "id": "7",
+      "date": "2026-03-27",
+      "amount": 1450,
+      "category": "Groceries",
+      "payment_source_id": "1",
+      "payment_source_name": "SBI Savings",
+      "description": "Weekly grocery run",
+      "notes": "Zepto order"
+    },
+    {
+      "id": "8",
+      "date": "2026-03-26",
+      "amount": 320,
+      "category": "Bills & Utilities",
+      "payment_source_id": "1",
+      "payment_source_name": "SBI Savings",
+      "description": "Electricity bill",
+      "notes": ""
+    },
+    {
+      "id": "9",
+      "date": "2026-03-25",
+      "amount": 600,
+      "category": "Entertainment",
+      "payment_source_id": "2",
+      "payment_source_name": "HDFC Credit Card",
+      "description": "Movie + snacks with friends",
+      "notes": "IMAX"
+    },
+    {
+      "id": "10",
+      "date": "2026-03-24",
+      "amount": 220,
+      "category": "Transport",
+      "payment_source_id": "3",
+      "payment_source_name": "Wallet Cash",
+      "description": "Auto rides",
+      "notes": ""
+    },
+    {
+      "id": "11",
+      "date": "2026-03-22",
+      "amount": 2500,
+      "category": "Food & Dining",
+      "payment_source_id": "2",
+      "payment_source_name": "HDFC Credit Card",
+      "description": "Birthday dinner for Priya",
+      "notes": "She paid — split equally",
+      "paid_by_name": "Priya"
+    },
+    {
+      "id": "12",
+      "date": "2026-03-20",
+      "amount": 199,
+      "category": "Personal Care",
+      "payment_source_id": "3",
+      "payment_source_name": "Wallet Cash",
+      "description": "Haircut",
       "notes": ""
     }
   ],
@@ -108,9 +310,9 @@
       "amount": 649,
       "frequency": "Monthly",
       "category": "Subscriptions",
-      "payment_source_id": "",
-      "payment_source_name": "Other",
-      "next_due": "2025-04-01",
+      "payment_source_id": "2",
+      "payment_source_name": "HDFC Credit Card",
+      "next_due": "2026-04-01",
       "start_date": "2023-06-01",
       "active": true,
       "notes": "4K plan"
@@ -121,12 +323,39 @@
       "amount": 119,
       "frequency": "Monthly",
       "category": "Subscriptions",
-      "payment_source_id": "",
-      "payment_source_name": "Other",
-      "next_due": "2025-04-05",
+      "payment_source_id": "2",
+      "payment_source_name": "HDFC Credit Card",
+      "next_due": "2026-04-05",
       "start_date": "2022-01-01",
       "active": true,
       "notes": "Individual plan"
+    },
+    {
+      "id": "3",
+      "name": "Claude Pro",
+      "amount": 1700,
+      "frequency": "Monthly",
+      "category": "Subscriptions",
+      "payment_source_id": "2",
+      "payment_source_name": "HDFC Credit Card",
+      "next_due": "2026-04-10",
+      "start_date": "2024-09-01",
+      "active": true,
+      "notes": "AI assistant"
+    },
+    {
+      "id": "4",
+      "name": "Domain Renewal",
+      "amount": 800,
+      "frequency": "Yearly",
+      "category": "Bills & Utilities",
+      "payment_source_id": "1",
+      "payment_source_name": "SBI Savings",
+      "next_due": "2026-11-20",
+      "start_date": "2021-11-20",
+      "active": true,
+      "notes": "Personal domain"
     }
-  ]
+  ],
+  "audit_log": []
 }

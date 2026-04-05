@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Investment } from '@/lib/types';
+import { useAssetStore } from '@/lib/assetStore';
 
 interface Props {
   open: boolean;
@@ -48,11 +49,16 @@ const EMPTY_FORM: Omit<Investment, 'id'> = {
   ticker: '',
   status: 'active',
   buy_range: '',
+  funded_by_account_id: '',
+  funded_by_account_name: '',
 };
 
 export default function InvestmentModal({ open, onClose, onSubmit, initialData }: Props) {
   const [form, setForm] = useState<Omit<Investment, 'id'>>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { accounts, hydrate: hydrateAccounts } = useAssetStore();
+
+  useEffect(() => { hydrateAccounts(); }, [hydrateAccounts]);
 
   useEffect(() => {
     if (initialData) {
@@ -200,6 +206,45 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
                     onChange={(e) => setField('purchase_date', e.target.value)} />
                   {errors.purchase_date && <p className="text-xs text-red-400">{errors.purchase_date}</p>}
                 </div>
+
+                {!initialData && (
+                  <div className="col-span-2 space-y-1.5">
+                    <Label>Funded From Account</Label>
+                    <Select
+                      value={form.funded_by_account_id || '__none__'}
+                      onValueChange={(v) => {
+                        if (v === '__none__') {
+                          setField('funded_by_account_id', '');
+                          setField('funded_by_account_name', '');
+                        } else {
+                          const acc = accounts.find((a) => a.id === v);
+                          setField('funded_by_account_id', v);
+                          setField('funded_by_account_name', acc?.name ?? '');
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select account (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None / Don&apos;t track</SelectItem>
+                        {accounts.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name}
+                            <span className="ml-1.5 text-xs text-slate-400">({a.category})</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500">
+                      Selecting an account will log a debit of{' '}
+                      <span className="text-indigo-400 font-medium">
+                        ₹{((form.buy_price || 0) * (form.quantity || 0)).toLocaleString('en-IN')}
+                      </span>
+                      {' '}against it.
+                    </p>
+                  </div>
+                )}
               </>
             )}
 

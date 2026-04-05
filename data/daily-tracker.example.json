@@ -1,0 +1,119 @@
+{
+  "habits": [
+    {
+      "id": "h1",
+      "name": "Morning Run",
+      "category": "Fitness",
+      "emoji": "🏃",
+      "color": "#10b981",
+      "created_at": "2025-01-01",
+      "active": true,
+      "type": "good"
+    },
+    {
+      "id": "h2",
+      "name": "Read 20 Pages",
+      "category": "Learning",
+      "emoji": "📚",
+      "color": "#6366f1",
+      "created_at": "2025-01-01",
+      "active": true,
+      "type": "good"
+    },
+    {
+      "id": "h3",
+      "name": "Meditate",
+      "category": "Mindfulness",
+      "emoji": "🧘",
+      "color": "#8b5cf6",
+      "created_at": "2025-01-15",
+      "active": true,
+      "type": "good"
+    },
+    {
+      "id": "h4",
+      "name": "Drink Water",
+      "category": "Health",
+      "emoji": "💧",
+      "color": "#3b82f6",
+      "created_at": "2025-01-01",
+      "active": true,
+      "type": "count",
+      "target_count": 8
+    },
+    {
+      "id": "h5",
+      "name": "No Junk Food",
+      "category": "Health",
+      "emoji": "🍔",
+      "color": "#ef4444",
+      "created_at": "2025-02-01",
+      "active": true,
+      "type": "bad"
+    },
+    {
+      "id": "h6",
+      "name": "Deep Work Block",
+      "category": "Productivity",
+      "emoji": "⚡",
+      "color": "#f59e0b",
+      "created_at": "2025-02-15",
+      "active": true,
+      "type": "good"
+    },
+    {
+      "id": "h7",
+      "name": "Journal",
+      "category": "Mindfulness",
+      "emoji": "✍️",
+      "color": "#ec4899",
+      "created_at": "2026-03-01",
+      "active": true,
+      "type": "good"
+    }
+  ],
+  "habit_logs": [
+    { "habit_id": "h1", "date": "2026-03-25" },
+    { "habit_id": "h2", "date": "2026-03-25" },
+    { "habit_id": "h3", "date": "2026-03-25" },
+    { "habit_id": "h4", "date": "2026-03-25", "count": 7 },
+    { "habit_id": "h6", "date": "2026-03-25" },
+
+    { "habit_id": "h1", "date": "2026-03-26" },
+    { "habit_id": "h3", "date": "2026-03-26" },
+    { "habit_id": "h4", "date": "2026-03-26", "count": 8 },
+    { "habit_id": "h6", "date": "2026-03-26" },
+    { "habit_id": "h7", "date": "2026-03-26" },
+
+    { "habit_id": "h1", "date": "2026-03-27" },
+    { "habit_id": "h2", "date": "2026-03-27" },
+    { "habit_id": "h3", "date": "2026-03-27" },
+    { "habit_id": "h4", "date": "2026-03-27", "count": 6 },
+    { "habit_id": "h5", "date": "2026-03-27" },
+    { "habit_id": "h7", "date": "2026-03-27" },
+
+    { "habit_id": "h2", "date": "2026-03-28" },
+    { "habit_id": "h4", "date": "2026-03-28", "count": 8 },
+    { "habit_id": "h6", "date": "2026-03-28" },
+    { "habit_id": "h7", "date": "2026-03-28" },
+
+    { "habit_id": "h1", "date": "2026-03-29" },
+    { "habit_id": "h2", "date": "2026-03-29" },
+    { "habit_id": "h3", "date": "2026-03-29" },
+    { "habit_id": "h4", "date": "2026-03-29", "count": 8 },
+    { "habit_id": "h6", "date": "2026-03-29" },
+    { "habit_id": "h7", "date": "2026-03-29" },
+
+    { "habit_id": "h1", "date": "2026-03-30" },
+    { "habit_id": "h3", "date": "2026-03-30" },
+    { "habit_id": "h4", "date": "2026-03-30", "count": 5 },
+    { "habit_id": "h5", "date": "2026-03-30" },
+
+    { "habit_id": "h1", "date": "2026-03-31" },
+    { "habit_id": "h2", "date": "2026-03-31" },
+    { "habit_id": "h3", "date": "2026-03-31" },
+    { "habit_id": "h4", "date": "2026-03-31", "count": 8 },
+    { "habit_id": "h6", "date": "2026-03-31" },
+    { "habit_id": "h7", "date": "2026-03-31" }
+  ]
+}

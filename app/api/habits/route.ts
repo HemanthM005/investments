@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-const FILE = path.join(process.cwd(), 'data', 'daily-tracker.json');
+const DEMO = process.env.DEMO_MODE === 'true';
+const FILE = path.join(process.cwd(), 'data', DEMO ? 'daily-tracker.example.json' : 'daily-tracker.json');
 const BAK  = FILE + '.bak';
 
 type TrackerData = {
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
       (file as Record<string, unknown>)[section] = data ?? [];
     }
 
-    writeFile(file);
+    if (!DEMO) writeFile(file);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });

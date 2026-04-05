@@ -94,9 +94,11 @@ export const useHabitStore = create<HabitStore>()((set, get) => ({
 //   • count:    a log entry exists AND count <= target_count
 
 export function isDoneOnDate(habit: Habit, date: string, logs: HabitLog[]): boolean {
+  if (date < habit.created_at) return false; // before habit existed — never counts
   const log = logs.find((l) => l.habit_id === habit.id && l.date === date);
+  // count habits: no log means 0 occurrences, which is under target → done
+  if (habit.type === 'count') return (log?.count ?? 0) <= (habit.target_count ?? 3);
   if (!log) return false;
-  if (habit.type === 'count') return (log.count ?? 0) <= (habit.target_count ?? 3);
   return true;
 }
 
@@ -114,6 +116,7 @@ export function getStreak(habit: Habit, logs: HabitLog[]): number {
   if (!isDoneOnDate(habit, today, logs)) d.setDate(d.getDate() - 1);
   for (let i = 0; i < 400; i++) {
     const s = d.toLocaleDateString('en-CA');
+    if (s < habit.created_at) break; // don't count before the habit was created
     if (isDoneOnDate(habit, s, logs)) {
       streak++;
       d.setDate(d.getDate() - 1);
