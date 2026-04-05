@@ -5,10 +5,12 @@ node_modules/
 .next/
 out/
 
-# Data — ALL data files are private; only the example is tracked
+# Data — ALL data files are private; only the examples are tracked
 # NEVER remove these rules — portfolio.json contains real personal financial data
-data/
+# Use data/* (not data/) so negation patterns for example files work correctly
+data/*
 !data/portfolio.example.json
+!data/daily-tracker.example.json
 
 # Environment variables
 .env

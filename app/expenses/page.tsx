@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import {
   Plus, Pencil, Trash2, Receipt, ShoppingCart, Utensils, Car,
   Tv, HeartPulse, Zap, GraduationCap, Plane, Home, RefreshCw,
-  Sparkles, Gift, HelpCircle, X, ChevronDown, Unlink, Users,
+  Sparkles, Gift, HelpCircle, X, ChevronDown, ChevronLeft, ChevronRight, Unlink, Users,
 } from 'lucide-react';
 import { useExpenseStore } from '@/lib/expenseStore';
 import { useAssetStore } from '@/lib/assetStore';
@@ -645,6 +645,11 @@ export default function ExpensesPage() {
 
   const [modal, setModal] = useState<null | (Omit<Expense, 'id'> & { id?: string })>(null);
   const [filterMonth, setFilterMonth] = useState(today().slice(0, 7));
+  const shiftMonth = (delta: number) => {
+    const [y, m] = filterMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    setFilterMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  };
   const [filterCat, setFilterCat]     = useState<string>('All');
   const [filterSrc, setFilterSrc]     = useState<string>('All');
 
@@ -768,8 +773,16 @@ export default function ExpensesPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
-        <input type="month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)}
-          className="bg-[#1a1d2e] border border-[#2a2d3e] rounded-lg px-3 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500" />
+        <div className="flex items-center gap-1 bg-[#1a1d2e] border border-[#2a2d3e] rounded-lg px-1 py-1">
+          <button onClick={() => shiftMonth(-1)} className="p-1 rounded hover:bg-[#2a2d3e] text-slate-400 hover:text-slate-100 transition-colors">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <input type="month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)}
+            className="bg-transparent text-sm text-slate-100 focus:outline-none px-1 cursor-pointer" />
+          <button onClick={() => shiftMonth(1)} className="p-1 rounded hover:bg-[#2a2d3e] text-slate-400 hover:text-slate-100 transition-colors">
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
         <div className="relative">
           <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)}
             className="appearance-none bg-[#1a1d2e] border border-[#2a2d3e] rounded-lg px-3 py-1.5 pr-7 text-sm text-slate-300 focus:outline-none focus:border-indigo-500">

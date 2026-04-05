@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, Pencil, Trash2, CheckCircle, Clock, AlertCircle, HandCoins } from 'lucide-react';
+import { Plus, Pencil, Trash2, CheckCircle, Clock, AlertCircle, HandCoins, ChevronDown } from 'lucide-react';
 import { useMoneyStore, getOutstandingLent, getOutstandingBorrowed } from '@/lib/moneyStore';
 import { useExpenseStore } from '@/lib/expenseStore';
 import { useAssetStore } from '@/lib/assetStore';
@@ -256,7 +256,7 @@ function MoneyModal({
   );
 }
 
-// ── Quick settle modal ─────────────────────────────────────────────────────
+// ── Quick settle modal (single record) ────────────────────────────────────
 
 function SettleModal({
   record,
@@ -296,6 +296,99 @@ function SettleModal({
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button onClick={() => { onSettle(amount); onClose(); }}>Confirm</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Settle All modal (all records for one person) ──────────────────────────
+
+function PersonSettleModal({
+  personName,
+  records,
+  accounts,
+  onClose,
+  onSettle,
+}: {
+  personName: string;
+  records: MoneyRecord[];
+  accounts: AssetAccount[];
+  onClose: () => void;
+  onSettle: (accountId: string) => void;
+}) {
+  const unsettled = records.filter((r) => r.status !== 'settled');
+  const lentOut   = unsettled.filter((r) => r.type === 'lent')
+    .reduce((s, r) => s + (r.amount - r.settled_amount), 0);
+  const borrowedOut = unsettled.filter((r) => r.type === 'borrowed')
+    .reduce((s, r) => s + (r.amount - r.settled_amount), 0);
+  const net = lentOut - borrowedOut;
+
+  const [accountId, setAccountId] = useState('__none__');
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Settle All — {personName}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {/* Breakdown */}
+          <div className="rounded-lg bg-[#0f1117] border border-[#2a2d3e] divide-y divide-[#2a2d3e] text-sm">
+            {lentOut > 0 && (
+              <div className="flex justify-between px-4 py-2.5">
+                <span className="text-slate-400">They owe you</span>
+                <span className="text-emerald-400 font-semibold">{formatCurrency(lentOut)}</span>
+              </div>
+            )}
+            {borrowedOut > 0 && (
+              <div className="flex justify-between px-4 py-2.5">
+                <span className="text-slate-400">You owe them</span>
+                <span className="text-red-400 font-semibold">{formatCurrency(borrowedOut)}</span>
+              </div>
+            )}
+            <div className="flex justify-between px-4 py-2.5 font-semibold">
+              <span className="text-slate-300">Net to {net >= 0 ? 'receive' : 'pay'}</span>
+              <span className={net >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                {formatCurrency(Math.abs(net))}
+              </span>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-500">
+            {unsettled.length} record{unsettled.length !== 1 ? 's' : ''} will be marked as settled.
+          </p>
+
+          {/* Account picker */}
+          <div className="space-y-1.5">
+            <Label>{net >= 0 ? 'Received Into Account' : 'Paid From Account'}
+              <span className="text-slate-500 text-xs ml-1">(optional)</span>
+            </Label>
+            <Select value={accountId} onValueChange={setAccountId}>
+              <SelectTrigger>
+                <SelectValue placeholder="No account / cash" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No account / cash</SelectItem>
+                {accounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name}
+                    <span className="text-slate-500 text-xs ml-2">{formatCurrency(a.balance)}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-1">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button
+              className="bg-emerald-700 hover:bg-emerald-600 text-white"
+              onClick={() => { onSettle(accountId === '__none__' ? '' : accountId); onClose(); }}
+            >
+              <CheckCircle className="h-4 w-4 mr-1.5" /> Settle All
+            </Button>
           </div>
         </div>
       </DialogContent>
@@ -410,115 +503,144 @@ function RecordCard({
 // Groups all records for one person into a single card with a breakdown list.
 
 function PersonGroup({
-  name, records, onEdit, onDelete, onSettle,
+  name, records, expanded, onToggle, onEdit, onDelete, onSettle, onSettleAll,
 }: {
   name: string;
-  records: MoneyRecord[]; // all records for this person (lent + borrowed mixed)
+  records: MoneyRecord[];
+  expanded: boolean;
+  onToggle: () => void;
   onEdit: (r: MoneyRecord) => void;
   onDelete: (r: MoneyRecord) => void;
   onSettle: (r: MoneyRecord) => void;
+  onSettleAll: () => void;
 }) {
   const lentOut = records.filter((r) => r.type === 'lent' && r.status !== 'settled')
     .reduce((s, r) => s + (r.amount - r.settled_amount), 0);
   const borrowedOut = records.filter((r) => r.type === 'borrowed' && r.status !== 'settled')
     .reduce((s, r) => s + (r.amount - r.settled_amount), 0);
-  const net = lentOut - borrowedOut; // positive = they owe you, negative = you owe them
+  const net = lentOut - borrowedOut;
   const allSettled = records.every((r) => r.status === 'settled');
   const netType = net >= 0 ? 'lent' : 'borrowed';
 
   return (
     <div className={cn(
       'bg-[#1a1d2e] border rounded-xl overflow-hidden',
-      allSettled ? 'border-[#2a2d3e] opacity-60' : netType === 'lent' ? 'border-emerald-800/40' : 'border-red-800/40',
+      allSettled ? 'border-[#2a2d3e]' : netType === 'lent' ? 'border-emerald-800/40' : 'border-red-800/40',
     )}>
-      {/* Person header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2d3e]">
-        <span className="font-semibold text-slate-100">{name}</span>
-        <div className="text-right">
-          {allSettled || net === 0 ? (
-            <span className="text-sm text-slate-400">all settled</span>
-          ) : (
-            <>
-              <div className={cn('text-base font-bold', net > 0 ? 'text-emerald-400' : 'text-red-400')}>
-                {formatCurrency(Math.abs(net))} net
-              </div>
-              <div className="text-xs text-slate-500">
-                {net > 0 ? `${name} owes you` : `you owe ${name}`}
-              </div>
-            </>
-          )}
+      {/* Clickable header — toggles collapse */}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <ChevronDown className={cn(
+            'h-4 w-4 text-slate-500 flex-shrink-0 transition-transform duration-200',
+            expanded && 'rotate-180',
+          )} />
+          <span className="font-semibold text-slate-100 truncate">{name}</span>
+          <span className="text-xs text-slate-600 flex-shrink-0">
+            {records.length} record{records.length !== 1 ? 's' : ''}
+          </span>
         </div>
-      </div>
 
-      {/* Individual records */}
-      <div className="divide-y divide-[#1e2133]">
-        {records.map((r) => {
-          const outstanding = r.amount - r.settled_amount;
-          const overdue = !r.due_date || r.status === 'settled' ? false : new Date(r.due_date) < new Date();
-          const pct = r.amount > 0 ? (r.settled_amount / r.amount) * 100 : 0;
-          return (
-            <div key={r.id} className={cn('px-4 py-3 space-y-2', overdue && 'bg-red-950/10')}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-xs text-slate-500">{r.type === 'lent' ? '💸 you lent' : '🤝 you borrowed'}</span>
-                    <span className={cn(
-                      'text-xs px-2 py-0.5 rounded-full border font-medium flex items-center gap-1',
-                      STATUS_COLOR[r.status],
-                    )}>
-                      {STATUS_ICON[r.status]}{r.status}
-                    </span>
-                    {overdue && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-950/50 text-red-400 border border-red-800/40">overdue</span>
-                    )}
-                    {r.source_expense_id && (
-                      <span className="text-xs text-indigo-400/70">split</span>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {!allSettled && net !== 0 && (
+            <Button
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); onSettleAll(); }}
+              className="h-7 px-2.5 text-xs bg-emerald-800/50 hover:bg-emerald-700/60 text-emerald-300 border border-emerald-700/50 gap-1"
+              variant="ghost"
+            >
+              <CheckCircle className="h-3 w-3" /> Settle All
+            </Button>
+          )}
+          <div className="text-right">
+            {allSettled || net === 0 ? (
+              <span className="text-sm text-slate-400">all settled</span>
+            ) : (
+              <>
+                <div className={cn('text-base font-bold', net > 0 ? 'text-emerald-400' : 'text-red-400')}>
+                  {formatCurrency(Math.abs(net))}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {net > 0 ? `${name} owes you` : `you owe ${name}`}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </button>
+
+      {/* Collapsible records list */}
+      {expanded && (
+        <div className="border-t border-[#2a2d3e] divide-y divide-[#1e2133]">
+          {records.map((r) => {
+            const outstanding = r.amount - r.settled_amount;
+            const overdue = !r.due_date || r.status === 'settled' ? false : new Date(r.due_date) < new Date();
+            const pct = r.amount > 0 ? (r.settled_amount / r.amount) * 100 : 0;
+            return (
+              <div key={r.id} className={cn('px-4 py-3 space-y-2', overdue && 'bg-red-950/10')}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs text-slate-500">{r.type === 'lent' ? '💸 you lent' : '🤝 you borrowed'}</span>
+                      <span className={cn(
+                        'text-xs px-2 py-0.5 rounded-full border font-medium flex items-center gap-1',
+                        STATUS_COLOR[r.status],
+                      )}>
+                        {STATUS_ICON[r.status]}{r.status}
+                      </span>
+                      {overdue && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-red-950/50 text-red-400 border border-red-800/40">overdue</span>
+                      )}
+                      {r.source_expense_id && (
+                        <span className="text-xs text-indigo-400/70">split</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5 truncate">
+                      {r.description || '—'} · {r.date}{r.due_date ? ` · due ${r.due_date}` : ''}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className={cn('text-sm font-semibold', r.type === 'lent' ? 'text-emerald-400' : 'text-red-400')}>
+                      {r.type === 'lent' ? '+' : '-'}{formatCurrency(r.amount)}
+                    </div>
+                    {r.status !== 'settled' && (
+                      <div className="text-xs text-slate-500">{formatCurrency(outstanding)} left</div>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5 truncate">
-                    {r.description || '—'} · {r.date}{r.due_date ? ` · due ${r.due_date}` : ''}
-                  </p>
                 </div>
-                <div className="text-right shrink-0">
-                  <div className={cn('text-sm font-semibold', r.type === 'lent' ? 'text-emerald-400' : 'text-red-400')}>
-                    {r.type === 'lent' ? '+' : '-'}{formatCurrency(r.amount)}
+
+                {r.amount > 0 && pct > 0 && (
+                  <div className="h-1 bg-[#2a2d3e] rounded-full overflow-hidden">
+                    <div
+                      className={cn('h-full rounded-full', r.type === 'lent' ? 'bg-emerald-500' : 'bg-red-500')}
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
-                  {r.status !== 'settled' && (
-                    <div className="text-xs text-slate-500">{formatCurrency(outstanding)} left</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Progress bar */}
-              {r.amount > 0 && pct > 0 && (
-                <div className="h-1 bg-[#2a2d3e] rounded-full overflow-hidden">
-                  <div
-                    className={cn('h-full rounded-full', r.type === 'lent' ? 'bg-emerald-500' : 'bg-red-500')}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                {r.status !== 'settled' && (
-                  <Button size="sm" variant="secondary" onClick={() => onSettle(r)} className="gap-1 text-xs h-6 px-2">
-                    <CheckCircle className="h-3 w-3" /> Settle
-                  </Button>
                 )}
-                <div className="ml-auto flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => onEdit(r)} className="h-6 w-6 text-slate-500 hover:text-indigo-400">
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => onDelete(r)} className="h-6 w-6 text-slate-500 hover:text-red-400">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+
+                <div className="flex items-center gap-2">
+                  {r.status !== 'settled' && (
+                    <Button size="sm" variant="secondary" onClick={() => onSettle(r)} className="gap-1 text-xs h-6 px-2">
+                      <CheckCircle className="h-3 w-3" /> Settle
+                    </Button>
+                  )}
+                  <div className="ml-auto flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => onEdit(r)} className="h-6 w-6 text-slate-500 hover:text-indigo-400">
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => onDelete(r)} className="h-6 w-6 text-slate-500 hover:text-red-400">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -552,11 +674,21 @@ export default function MoneyTrackerPage() {
   const { records, addRecord, updateRecord, deleteRecord, markSettled } = useMoneyStore();
   const updateExpense = useExpenseStore((s) => s.updateExpense);
   const expenses = useExpenseStore((s) => s.expenses);
-  const accounts = useAssetStore((s) => s.accounts);
+  const { accounts, addTransaction } = useAssetStore();
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<MoneyRecord | null>(null);
   const [settleTarget, setSettleTarget] = useState<MoneyRecord | null>(null);
+  const [personSettleTarget, setPersonSettleTarget] = useState<{ name: string; records: MoneyRecord[] } | null>(null);
   const [tab, setTab] = useState<'all' | 'lent' | 'borrowed'>('all');
+  const [showSettled, setShowSettled] = useState(false);
+  const [expandedPeople, setExpandedPeople] = useState<Set<string>>(new Set());
+
+  const togglePerson = (name: string) =>
+    setExpandedPeople((prev) => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
+      return next;
+    });
 
   const totalLent = useMemo(() => getOutstandingLent(records), [records]);
   const totalBorrowed = useMemo(() => getOutstandingBorrowed(records), [records]);
@@ -587,6 +719,17 @@ export default function MoneyTrackerPage() {
     return { lentGroups: lent, borrowedGroups: borrowed };
   }, [allPersonGroups]);
 
+  const settledLentCount     = lentGroups.filter(([, recs]) => recs.every((r) => r.status === 'settled')).length;
+  const settledBorrowedCount = borrowedGroups.filter(([, recs]) => recs.every((r) => r.status === 'settled')).length;
+
+  const visibleLentGroups     = showSettled ? lentGroups     : lentGroups.filter(([, recs]) => !recs.every((r) => r.status === 'settled'));
+  const visibleBorrowedGroups = showSettled ? borrowedGroups : borrowedGroups.filter(([, recs]) => !recs.every((r) => r.status === 'settled'));
+
+  const allVisibleNames = [...visibleLentGroups, ...visibleBorrowedGroups].map(([n]) => n);
+  const allExpanded = allVisibleNames.length > 0 && allVisibleNames.every((n) => expandedPeople.has(n));
+  const expandAll  = () => setExpandedPeople(new Set(allVisibleNames));
+  const collapseAll = () => setExpandedPeople(new Set());
+
   const handleSubmit = (data: Omit<MoneyRecord, 'id'>) => {
     if (editTarget) {
       updateRecord(editTarget.id, data);
@@ -616,6 +759,32 @@ export default function MoneyTrackerPage() {
   const handleDelete = (r: MoneyRecord) => {
     adjustAccountForRecord(r, /* reverse */ true);
     deleteRecord(r.id);
+  };
+
+  const handlePersonSettle = (accountId: string) => {
+    if (!personSettleTarget) return;
+    const unsettled = personSettleTarget.records.filter((r) => r.status !== 'settled');
+    const lentOut = unsettled.filter((r) => r.type === 'lent')
+      .reduce((s, r) => s + (r.amount - r.settled_amount), 0);
+    const borrowedOut = unsettled.filter((r) => r.type === 'borrowed')
+      .reduce((s, r) => s + (r.amount - r.settled_amount), 0);
+
+    // Mark every unsettled record as fully settled
+    unsettled.forEach((r) => markSettled(r.id, r.amount - r.settled_amount));
+
+    // Log a single transaction on the chosen account
+    if (accountId) {
+      const net = lentOut - borrowedOut;
+      if (net !== 0) {
+        addTransaction(accountId, {
+          date: new Date().toISOString().split('T')[0],
+          type: net > 0 ? 'credit' : 'debit',
+          amount: Math.abs(net),
+          note: `Settlement — ${personSettleTarget.name}`,
+        });
+      }
+    }
+    setPersonSettleTarget(null);
   };
 
   return (
@@ -660,8 +829,8 @@ export default function MoneyTrackerPage() {
         </Card>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2">
+      {/* Tabs + settled toggle */}
+      <div className="flex items-center gap-2 flex-wrap">
         {(['all', 'lent', 'borrowed'] as const).map((t) => (
           <button
             key={t}
@@ -679,6 +848,35 @@ export default function MoneyTrackerPage() {
             </span>
           </button>
         ))}
+
+        <div className="ml-auto flex items-center gap-2">
+          {/* Expand / Collapse all */}
+          {allVisibleNames.length > 0 && (
+            <button
+              onClick={allExpanded ? collapseAll : expandAll}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border border-[#2a2d3e] text-slate-400 hover:bg-[#2a2d3e]"
+            >
+              {allExpanded ? 'Collapse All' : 'Expand All'}
+            </button>
+          )}
+
+          {/* Show/hide settled */}
+          {(settledLentCount + settledBorrowedCount) > 0 && (
+            <button
+              onClick={() => setShowSettled((v) => !v)}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border',
+                showSettled
+                  ? 'bg-slate-700 border-slate-600 text-slate-300'
+                  : 'border-[#2a2d3e] text-slate-500 hover:bg-[#2a2d3e] hover:text-slate-400'
+              )}
+            >
+              {showSettled
+                ? 'Hide settled'
+                : `Show ${settledLentCount + settledBorrowedCount} settled`}
+            </button>
+          )}
+        </div>
       </div>
 
       {records.length === 0 ? (
@@ -696,21 +894,26 @@ export default function MoneyTrackerPage() {
                 <h2 className="text-sm font-semibold text-emerald-400 flex items-center gap-2">
                   💸 Money I Lent
                   <span className="text-xs text-slate-500 font-normal">
-                    ({lentGroups.length} {lentGroups.length !== 1 ? 'people' : 'person'})
+                    ({visibleLentGroups.length}{settledLentCount > 0 && !showSettled ? ` of ${lentGroups.length}` : ''} {lentGroups.length !== 1 ? 'people' : 'person'})
                   </span>
                 </h2>
               )}
-              {lentGroups.length === 0 ? (
-                <p className="text-sm text-slate-500 py-4">No lending records.</p>
+              {visibleLentGroups.length === 0 ? (
+                <p className="text-sm text-slate-500 py-4">
+                  {lentGroups.length > 0 ? 'All settled — click "Show settled" to view.' : 'No lending records.'}
+                </p>
               ) : (
-                lentGroups.map(([name, recs]) => (
+                visibleLentGroups.map(([name, recs]) => (
                   <PersonGroup
                     key={name}
                     name={name}
                     records={recs}
+                    expanded={expandedPeople.has(name)}
+                    onToggle={() => togglePerson(name)}
                     onEdit={(r) => { setEditTarget(r); setModalOpen(true); }}
                     onDelete={(r) => handleDelete(r)}
                     onSettle={(r) => setSettleTarget(r)}
+                    onSettleAll={() => setPersonSettleTarget({ name, records: recs })}
                   />
                 ))
               )}
@@ -724,21 +927,26 @@ export default function MoneyTrackerPage() {
                 <h2 className="text-sm font-semibold text-red-400 flex items-center gap-2">
                   🤝 Money I Borrowed
                   <span className="text-xs text-slate-500 font-normal">
-                    ({borrowedGroups.length} {borrowedGroups.length !== 1 ? 'people' : 'person'})
+                    ({visibleBorrowedGroups.length}{settledBorrowedCount > 0 && !showSettled ? ` of ${borrowedGroups.length}` : ''} {borrowedGroups.length !== 1 ? 'people' : 'person'})
                   </span>
                 </h2>
               )}
-              {borrowedGroups.length === 0 ? (
-                <p className="text-sm text-slate-500 py-4">No borrowing records.</p>
+              {visibleBorrowedGroups.length === 0 ? (
+                <p className="text-sm text-slate-500 py-4">
+                  {borrowedGroups.length > 0 ? 'All settled — click "Show settled" to view.' : 'No borrowing records.'}
+                </p>
               ) : (
-                borrowedGroups.map(([name, recs]) => (
+                visibleBorrowedGroups.map(([name, recs]) => (
                   <PersonGroup
                     key={name}
                     name={name}
                     records={recs}
+                    expanded={expandedPeople.has(name)}
+                    onToggle={() => togglePerson(name)}
                     onEdit={(r) => { setEditTarget(r); setModalOpen(true); }}
                     onDelete={(r) => handleDelete(r)}
                     onSettle={(r) => setSettleTarget(r)}
+                    onSettleAll={() => setPersonSettleTarget({ name, records: recs })}
                   />
                 ))
               )}
@@ -760,6 +968,16 @@ export default function MoneyTrackerPage() {
           record={settleTarget}
           onClose={() => setSettleTarget(null)}
           onSettle={(amount) => markSettled(settleTarget.id, amount)}
+        />
+      )}
+
+      {personSettleTarget && (
+        <PersonSettleModal
+          personName={personSettleTarget.name}
+          records={personSettleTarget.records}
+          accounts={accounts}
+          onClose={() => setPersonSettleTarget(null)}
+          onSettle={handlePersonSettle}
         />
       )}
     </div>

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-const FILE = path.join(process.cwd(), 'data', 'portfolio.json');
+const DEMO = process.env.DEMO_MODE === 'true';
+const FILE = path.join(process.cwd(), 'data', DEMO ? 'portfolio.example.json' : 'portfolio.json');
 const MAX_AUDIT = 500; // keep last 500 audit entries
 
 type AuditEntry = {
@@ -163,7 +164,7 @@ export async function POST(req: Request) {
       });
     }
 
-    writeFile(file);
+    if (!DEMO) writeFile(file);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });

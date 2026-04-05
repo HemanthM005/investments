@@ -12,6 +12,8 @@ export interface Investment {
   status?: 'active' | 'watchlist';  // omitted = active
   buy_range?: string;       // watchlist only — target entry range e.g. "3500-3750"
   research?: string;        // long-form research notes (shown in popup)
+  funded_by_account_id?: string;   // AssetAccount.id — account debited when purchased
+  funded_by_account_name?: string; // snapshot of account name at purchase time
   _deleted?: boolean;       // soft-delete tombstone — filtered from UI, kept in file
 }
 

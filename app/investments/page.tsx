@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Plus, Pencil, Trash2, AlertTriangle, RefreshCw, Wifi, WifiOff, Eye, Info } from 'lucide-react';
 import { useInvestmentStore } from '@/lib/store';
+import { useAssetStore } from '@/lib/assetStore';
 import {
   formatCurrency,
   formatPercent,
@@ -51,6 +52,7 @@ const ASSET_TYPE_COLORS: Record<string, string> = {
 
 export default function InvestmentsPage() {
   const { investments, addInvestment, updateInvestment, deleteInvestment } = useInvestmentStore();
+  const { addTransaction } = useAssetStore();
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Investment | null>(null);
   const [filterType, setFilterType] = useState('all');
@@ -263,6 +265,15 @@ export default function InvestmentsPage() {
       updateInvestment(editTarget.id, data);
     } else {
       addInvestment(data);
+      if (data.funded_by_account_id && data.status !== 'watchlist') {
+        const totalCost = Math.round(data.buy_price * data.quantity * 100) / 100;
+        addTransaction(data.funded_by_account_id, {
+          date: data.purchase_date,
+          type: 'debit',
+          amount: totalCost,
+          note: `Investment: ${data.asset_name}`,
+        });
+      }
     }
     setModalOpen(false);
     setEditTarget(null);

@@ -19,11 +19,15 @@ import { Button } from '@/components/ui/button';
 
 export default function DashboardPage() {
   const investments = useInvestmentStore((s) => s.investments);
+  const activeInvestments = useMemo(
+    () => investments.filter((inv) => inv.status !== 'watchlist'),
+    [investments]
+  );
   const moneyRecords = useMoneyStore((s) => s.records);
   const accounts     = useAssetStore((s) => s.accounts);
   const expenses     = useExpenseStore((s) => s.expenses);
   const recurring    = useRecurringStore((s) => s.recurring);
-  const stats = useMemo(() => computeStats(investments), [investments]);
+  const stats = useMemo(() => computeStats(activeInvestments), [activeInvestments]);
 
   const totalLent          = useMemo(() => getOutstandingLent(moneyRecords), [moneyRecords]);
   const totalBorrowed      = useMemo(() => getOutstandingBorrowed(moneyRecords), [moneyRecords]);
@@ -42,8 +46,8 @@ export default function DashboardPage() {
   // Risk alerts
   const riskAlerts = useMemo(() => {
     const alerts: { type: 'danger' | 'success' | 'warning'; message: string }[] = [];
-    const totalValue = investments.reduce((s, inv) => s + inv.current_price * inv.quantity, 0);
-    investments.forEach((inv) => {
+    const totalValue = activeInvestments.reduce((s, inv) => s + inv.current_price * inv.quantity, 0);
+    activeInvestments.forEach((inv) => {
       const pnl = getPnlPercent(inv);
       if (pnl < -20)
         alerts.push({ type: 'danger', message: `${inv.asset_name} is down ${Math.abs(pnl).toFixed(1)}% — consider reviewing this position` });
@@ -56,9 +60,9 @@ export default function DashboardPage() {
       }
     });
     return alerts;
-  }, [investments]);
+  }, [activeInvestments]);
 
-  if (investments.length === 0) {
+  if (activeInvestments.length === 0) {
     return (
       <div className="max-w-[1400px] mx-auto px-4 py-12 text-center">
         <TrendingUp className="h-16 w-16 text-indigo-400 mx-auto mb-4" />
@@ -77,7 +81,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-100">Portfolio Dashboard</h1>
           <p className="text-sm text-slate-400 mt-0.5">
-            {investments.length} investment{investments.length !== 1 ? 's' : ''} · {moneyRecords.length} money record{moneyRecords.length !== 1 ? 's' : ''} · {accounts.length} account{accounts.length !== 1 ? 's' : ''}
+            {activeInvestments.length} investment{activeInvestments.length !== 1 ? 's' : ''} · {moneyRecords.length} money record{moneyRecords.length !== 1 ? 's' : ''} · {accounts.length} account{accounts.length !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex gap-2">
@@ -511,7 +515,7 @@ export default function DashboardPage() {
       )}
 
       {/* ── CHARTS ───────────────────────────────────────────────────── */}
-      <PortfolioCharts investments={investments} />
+      <PortfolioCharts investments={activeInvestments} />
 
       {/* ── SUMMARY TABLE ────────────────────────────────────────────── */}
       <Card>
@@ -519,7 +523,7 @@ export default function DashboardPage() {
           <CardTitle className="text-sm">All Investments</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <InvestmentTable investments={investments} compact />
+          <InvestmentTable investments={activeInvestments} compact />
         </CardContent>
       </Card>
 
