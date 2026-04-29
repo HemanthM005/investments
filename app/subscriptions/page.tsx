@@ -21,7 +21,7 @@ const FREQUENCIES: RecurringFrequency[] = ['Daily', 'Weekly', 'Monthly', 'Quarte
 
 const CATEGORIES: ExpenseCategory[] = [
   'Subscriptions', 'Bills & Utilities', 'Health & Medical', 'Education',
-  'Entertainment', 'Food & Dining', 'Transport', 'Shopping', 'Other',
+  'Entertainment', 'Food & Dining', 'Transport & Travel', 'Sports & Fitness', 'Loan & EMI', 'Shopping', 'Other',
 ];
 
 const FREQ_BADGE: Record<RecurringFrequency, string> = {

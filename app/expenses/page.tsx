@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import {
   Plus, Pencil, Trash2, Receipt, ShoppingCart, Utensils, Car,
   Tv, HeartPulse, Zap, GraduationCap, Plane, Home, RefreshCw,
-  Sparkles, Gift, HelpCircle, X, ChevronDown, ChevronLeft, ChevronRight, Unlink, Users,
+  Sparkles, Gift, HelpCircle, X, ChevronDown, ChevronLeft, ChevronRight, Unlink, Users, Dumbbell, Banknote,
 } from 'lucide-react';
 import { useExpenseStore } from '@/lib/expenseStore';
 import { useAssetStore } from '@/lib/assetStore';
@@ -17,43 +17,51 @@ import { Button } from '@/components/ui/button';
 // ── category config ───────────────────────────────────────────────────────────
 
 const CATEGORIES: ExpenseCategory[] = [
-  'Food & Dining', 'Groceries', 'Transport', 'Shopping', 'Entertainment',
-  'Health & Medical', 'Bills & Utilities', 'Education', 'Travel', 'Rent',
-  'Subscriptions', 'Personal Care', 'Gifts & Donations', 'Other',
+  'Food & Dining', 'Groceries', 'Transport & Travel', 'Shopping', 'Entertainment',
+  'Health & Medical', 'Bills & Utilities', 'Education', 'Trips & Vacations', 'Rent',
+  'Subscriptions', 'Personal Care', 'Sports & Fitness', 'Loan & EMI', 'Gifts & Donations', 'Other',
 ];
 
-const CATEGORY_ICONS: Record<ExpenseCategory, React.ElementType> = {
-  'Food & Dining':     Utensils,
-  'Groceries':         ShoppingCart,
-  'Transport':         Car,
-  'Shopping':          ShoppingCart,
-  'Entertainment':     Tv,
-  'Health & Medical':  HeartPulse,
-  'Bills & Utilities': Zap,
-  'Education':         GraduationCap,
-  'Travel':            Plane,
-  'Rent':              Home,
-  'Subscriptions':     RefreshCw,
-  'Personal Care':     Sparkles,
-  'Gifts & Donations': Gift,
-  'Other':             HelpCircle,
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  'Food & Dining':      Utensils,
+  'Groceries':          ShoppingCart,
+  'Transport & Travel': Car,
+  'Transport':          Car,       // legacy
+  'Shopping':           ShoppingCart,
+  'Entertainment':      Tv,
+  'Health & Medical':   HeartPulse,
+  'Bills & Utilities':  Zap,
+  'Education':          GraduationCap,
+  'Trips & Vacations':  Plane,
+  'Travel':             Plane,     // legacy
+  'Rent':               Home,
+  'Subscriptions':      RefreshCw,
+  'Personal Care':      Sparkles,
+  'Sports & Fitness':   Dumbbell,
+  'Loan & EMI':         Banknote,
+  'Gifts & Donations':  Gift,
+  'Other':              HelpCircle,
 };
 
-const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
-  'Food & Dining':     'bg-orange-900/40 text-orange-400',
-  'Groceries':         'bg-green-900/40 text-green-400',
-  'Transport':         'bg-blue-900/40 text-blue-400',
-  'Shopping':          'bg-pink-900/40 text-pink-400',
-  'Entertainment':     'bg-purple-900/40 text-purple-400',
-  'Health & Medical':  'bg-red-900/40 text-red-400',
-  'Bills & Utilities': 'bg-yellow-900/40 text-yellow-400',
-  'Education':         'bg-indigo-900/40 text-indigo-400',
-  'Travel':            'bg-cyan-900/40 text-cyan-400',
-  'Rent':              'bg-slate-700/60 text-slate-300',
-  'Subscriptions':     'bg-violet-900/40 text-violet-400',
-  'Personal Care':     'bg-rose-900/40 text-rose-400',
-  'Gifts & Donations': 'bg-amber-900/40 text-amber-400',
-  'Other':             'bg-slate-800 text-slate-400',
+const CATEGORY_COLORS: Record<string, string> = {
+  'Food & Dining':      'bg-orange-900/40 text-orange-400',
+  'Groceries':          'bg-green-900/40 text-green-400',
+  'Transport & Travel': 'bg-blue-900/40 text-blue-400',
+  'Transport':          'bg-blue-900/40 text-blue-400',   // legacy
+  'Shopping':           'bg-pink-900/40 text-pink-400',
+  'Entertainment':      'bg-purple-900/40 text-purple-400',
+  'Health & Medical':   'bg-red-900/40 text-red-400',
+  'Bills & Utilities':  'bg-yellow-900/40 text-yellow-400',
+  'Education':          'bg-indigo-900/40 text-indigo-400',
+  'Trips & Vacations':  'bg-cyan-900/40 text-cyan-400',
+  'Travel':             'bg-cyan-900/40 text-cyan-400',   // legacy
+  'Rent':               'bg-slate-700/60 text-slate-300',
+  'Subscriptions':      'bg-violet-900/40 text-violet-400',
+  'Personal Care':      'bg-rose-900/40 text-rose-400',
+  'Sports & Fitness':   'bg-emerald-900/40 text-emerald-400',
+  'Loan & EMI':         'bg-teal-900/40 text-teal-400',
+  'Gifts & Donations':  'bg-amber-900/40 text-amber-400',
+  'Other':              'bg-slate-800 text-slate-400',
 };
 
 // ── helpers ───────────────────────────────────────────────────────────────────

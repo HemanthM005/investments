@@ -1,14 +1,19 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Plus, Pencil, Trash2, AlertTriangle, RefreshCw, Wifi, WifiOff, Eye, Info } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, RefreshCw, Wifi, WifiOff, Eye, Info, TrendingDown, BadgeCheck } from 'lucide-react';
 import { useInvestmentStore } from '@/lib/store';
 import { useAssetStore } from '@/lib/assetStore';
+import { saveSections } from '@/lib/saveHelper';
+import SellInvestmentModal from '@/components/SellInvestmentModal';
+import type { AccountTransaction } from '@/lib/types';
 import {
   formatCurrency,
   formatPercent,
   getPnlPercent,
   computeStats,
+  computeCapitalGains,
+  formatHoldingPeriod,
   cn,
 } from '@/lib/utils';
 import InvestmentModal from '@/components/InvestmentModal';
@@ -51,8 +56,8 @@ const ASSET_TYPE_COLORS: Record<string, string> = {
 };
 
 export default function InvestmentsPage() {
-  const { investments, addInvestment, updateInvestment, deleteInvestment } = useInvestmentStore();
-  const { addTransaction } = useAssetStore();
+  const { investments, addInvestment, updateInvestment, deleteInvestment, sellInvestment } = useInvestmentStore();
+  const { addTransaction } = useAssetStore(); // used for purchase debits only
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Investment | null>(null);
   const [filterType, setFilterType] = useState('all');
@@ -60,10 +65,13 @@ export default function InvestmentsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [researchInv, setResearchInv]   = useState<Investment | null>(null);
   const [analysisInv, setAnalysisInv]   = useState<Investment | null>(null);
+  const [sellTarget, setSellTarget]     = useState<Investment | null>(null);
+  const [editSaleTarget, setEditSaleTarget] = useState<Investment | null>(null);
 
-  // Split active vs watchlist — must come before ticker memos
-  const activeInvestments  = useMemo(() => investments.filter((inv) => inv.status !== 'watchlist'), [investments]);
+  // Split active vs watchlist vs sold — must come before ticker memos
+  const activeInvestments  = useMemo(() => investments.filter((inv) => !inv.status || inv.status === 'active'), [investments]);
   const watchlistItems     = useMemo(() => investments.filter((inv) => inv.status === 'watchlist'), [investments]);
+  const soldInvestments    = useMemo(() => investments.filter((inv) => inv.status === 'sold'), [investments]);
 
   // ── Live price refresh ────────────────────────────────────────────────────
   const [refreshingIds, setRefreshingIds] = useState<Set<string>>(new Set());
@@ -287,6 +295,74 @@ export default function InvestmentsPage() {
       setDeleteConfirm(id);
       setTimeout(() => setDeleteConfirm(null), 3000);
     }
+  };
+
+  const handleSell = (
+    saleData: {
+      sold_price: number;
+      sold_date: string;
+      sale_charges: number;
+      credited_to_account_id: string;
+      credited_to_account_name: string;
+      notes?: string;
+    },
+    isEdit: boolean,
+  ) => {
+    const target = isEdit ? editSaleTarget : sellTarget;
+    if (!target) return;
+
+    // ── 1. Determine whether to apply a credit transaction ───────────────────
+    const prevAccountId  = target.credited_to_account_id ?? '';
+    const newAccountId   = saleData.credited_to_account_id;
+    const accountChanged = newAccountId !== prevAccountId;
+    // Credit when: new sale, OR account changed, OR same account but credit was never
+    // successfully written (sale_credited flag absent — handles race-condition recovery)
+    const shouldCredit = !!newAccountId && (!isEdit || accountChanged || !target.sale_credited);
+
+    // ── 2. Compute updated investments ────────────────────────────────────────
+    const saleFields = {
+      status: 'sold' as const,
+      sold_price: saleData.sold_price,
+      sold_date: saleData.sold_date,
+      sale_charges: saleData.sale_charges,
+      credited_to_account_id: saleData.credited_to_account_id,
+      credited_to_account_name: saleData.credited_to_account_name,
+      sale_credited: shouldCredit ? true : (target.sale_credited ?? false),
+    };
+    const updatedInvestments = useInvestmentStore.getState().investments.map((inv) =>
+      inv.id === target.id ? { ...inv, ...saleFields } : inv
+    );
+
+    let updatedAccounts = useAssetStore.getState().accounts;
+    if (shouldCredit) {
+      const netProceeds = Math.round((saleData.sold_price * target.quantity - saleData.sale_charges) * 100) / 100;
+      updatedAccounts = updatedAccounts.map((acc) => {
+        if (acc.id !== newAccountId) return acc;
+        const newTx: AccountTransaction = {
+          id: crypto.randomUUID(),
+          date: saleData.sold_date,
+          type: 'credit',
+          amount: netProceeds,
+          note: `Sale: ${target.asset_name}`,
+        };
+        return {
+          ...acc,
+          balance: Math.round((acc.balance + netProceeds) * 100) / 100,
+          last_updated: saleData.sold_date,
+          transactions: [newTx, ...(acc.transactions ?? [])],
+        };
+      });
+    }
+
+    // ── 3. Apply to in-memory stores synchronously ────────────────────────────
+    useInvestmentStore.setState({ investments: updatedInvestments });
+    useAssetStore.setState({ accounts: updatedAccounts });
+
+    // ── 4. Single atomic file write — prevents race condition between sections ─
+    saveSections({ investments: updatedInvestments, accounts: updatedAccounts });
+
+    setSellTarget(null);
+    setEditSaleTarget(null);
   };
 
   return (
@@ -537,6 +613,15 @@ export default function InvestmentsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => setSellTarget(inv)}
+                              className="h-7 w-7 text-slate-400 hover:text-amber-400"
+                              title="Mark as Sold"
+                            >
+                              <TrendingDown className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => openEdit(inv)}
                               className="h-7 w-7 text-slate-400 hover:text-indigo-400"
                             >
@@ -731,6 +816,129 @@ export default function InvestmentsPage() {
         </div>
       )}
 
+      {/* Sold Investments History */}
+      {soldInvestments.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <BadgeCheck className="h-4 w-4 text-slate-400" />
+            <h2 className="text-base font-semibold text-slate-300">Sold Investments</h2>
+            <span className="text-xs text-slate-500 bg-[#1a1d2e] border border-[#2a2d3e] rounded-full px-2 py-0.5">
+              {soldInvestments.length} position{soldInvestments.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="space-y-3">
+            {soldInvestments.map((inv) => {
+              const tax = inv.sold_price && inv.sold_date
+                ? computeCapitalGains(inv, inv.sold_price, inv.sold_date, inv.sale_charges ?? 0)
+                : null;
+              return (
+                <Card key={inv.id}>
+                  <CardContent className="p-4">
+                    {/* Top row: name + type + dates + edit button */}
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
+                      <div>
+                        <p className="font-semibold text-slate-100">{inv.asset_name}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Bought {inv.purchase_date} &rarr; Sold {inv.sold_date ?? '—'}
+                          {tax && <span className="ml-2 text-slate-600">· {formatHoldingPeriod(tax.holdingDays)}</span>}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                          ASSET_TYPE_COLORS[inv.asset_type]
+                        )}>
+                          {inv.asset_type}
+                        </span>
+                        {tax && (
+                          <span className={cn(
+                            'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                            tax.isLTCG ? 'bg-emerald-900/40 text-emerald-300' : 'bg-amber-900/40 text-amber-300'
+                          )}>
+                            {tax.taxType}
+                          </span>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setEditSaleTarget(inv)}
+                          className="h-7 w-7 text-slate-500 hover:text-indigo-400"
+                          title="Edit sale details"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Numbers grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs text-slate-500 mb-0.5">Buy Price</p>
+                        <p className="text-slate-300">{formatCurrency(inv.buy_price)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-0.5">Sell Price</p>
+                        <p className="text-slate-300">{inv.sold_price ? formatCurrency(inv.sold_price) : '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-0.5">Qty</p>
+                        <p className="text-slate-300">{inv.quantity}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-0.5">Charges</p>
+                        <p className="text-slate-400">{inv.sale_charges && inv.sale_charges > 0 ? formatCurrency(inv.sale_charges) : '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-0.5">Net Proceeds</p>
+                        <p className="text-slate-200 font-medium">{tax ? formatCurrency(tax.netProceeds) : '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-0.5">Realized P&amp;L</p>
+                        <p className={cn('font-semibold', tax && tax.realizedPnL >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                          {tax ? `${tax.realizedPnL >= 0 ? '+' : ''}${formatCurrency(tax.realizedPnL)}` : '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-0.5">Est. Tax</p>
+                        <p className="text-amber-400 font-medium">
+                          {tax && tax.realizedPnL > 0 ? formatCurrency(tax.estimatedTax) : <span className="text-slate-600">—</span>}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Tax note + credited account */}
+                    {tax && (
+                      <div className="mt-3 flex flex-wrap items-start justify-between gap-2 border-t border-[#2a2d3e] pt-3">
+                        <p className="text-xs text-slate-500 max-w-lg leading-relaxed">{tax.taxNote}</p>
+                        <p className="text-xs text-slate-500 whitespace-nowrap">
+                          Credited to:{' '}
+                          <span className="text-slate-300">{inv.credited_to_account_name || 'External'}</span>
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+          {/* Realized P&L summary */}
+          {(() => {
+            const totalRealized = soldInvestments.reduce((sum, inv) => {
+              const net = (inv.sold_price ?? 0) * inv.quantity - (inv.sale_charges ?? 0);
+              return sum + net - inv.buy_price * inv.quantity;
+            }, 0);
+            return (
+              <p className="text-right text-sm text-slate-500">
+                Total realized P&amp;L:{' '}
+                <span className={`font-semibold ${totalRealized >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {totalRealized >= 0 ? '+' : ''}{formatCurrency(totalRealized)}
+                </span>
+              </p>
+            );
+          })()}
+        </div>
+      )}
+
       <InvestmentModal
         open={modalOpen}
         onClose={() => { setModalOpen(false); setEditTarget(null); }}
@@ -746,6 +954,19 @@ export default function InvestmentsPage() {
       <StockAnalysisDrawer
         investment={analysisInv}
         onClose={() => setAnalysisInv(null)}
+      />
+
+      <SellInvestmentModal
+        investment={sellTarget}
+        onClose={() => setSellTarget(null)}
+        onConfirm={handleSell}
+      />
+
+      <SellInvestmentModal
+        investment={editSaleTarget}
+        isEditMode
+        onClose={() => setEditSaleTarget(null)}
+        onConfirm={handleSell}
       />
     </div>
   );
