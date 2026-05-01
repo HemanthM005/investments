@@ -260,15 +260,18 @@ function MoneyModal({
 
 function SettleModal({
   record,
+  accounts,
   onClose,
   onSettle,
 }: {
   record: MoneyRecord;
+  accounts: AssetAccount[];
   onClose: () => void;
-  onSettle: (amount: number) => void;
+  onSettle: (amount: number, accountId: string) => void;
 }) {
   const outstanding = record.amount - record.settled_amount;
   const [amount, setAmount] = useState(outstanding);
+  const [accountId, setAccountId] = useState('__none__');
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -281,21 +284,41 @@ function SettleModal({
             Outstanding: <span className="text-slate-100 font-semibold">{formatCurrency(outstanding)}</span>
           </p>
           <div className="space-y-1.5">
-            <Label>Amount Returned (₹)</Label>
+            <Label>Amount Settled (₹)</Label>
             <Input
               type="number"
               value={amount}
               onChange={(e) => setAmount(Math.min(parseFloat(e.target.value) || 0, outstanding))}
             />
           </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" className="flex-1" onClick={() => setAmount(outstanding)}>
-              Full Amount
-            </Button>
+          <Button variant="ghost" className="w-full" onClick={() => setAmount(outstanding)}>
+            Full Amount
+          </Button>
+          <div className="space-y-1.5">
+            <Label>
+              {record.type === 'lent' ? 'Received Into Account' : 'Paid From Account'}
+              <span className="text-slate-500 text-xs ml-1">(optional)</span>
+            </Label>
+            <Select value={accountId} onValueChange={setAccountId}>
+              <SelectTrigger>
+                <SelectValue placeholder="No account / cash" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No account / cash</SelectItem>
+                {accounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name}
+                    <span className="text-slate-500 text-xs ml-2">{formatCurrency(a.balance)}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button onClick={() => { onSettle(amount); onClose(); }}>Confirm</Button>
+            <Button onClick={() => { onSettle(amount, accountId === '__none__' ? '' : accountId); onClose(); }}>
+              Confirm
+            </Button>
           </div>
         </div>
       </DialogContent>
@@ -316,7 +339,7 @@ function PersonSettleModal({
   records: MoneyRecord[];
   accounts: AssetAccount[];
   onClose: () => void;
-  onSettle: (accountId: string) => void;
+  onSettle: (accountId: string, amount: number) => void;
 }) {
   const unsettled = records.filter((r) => r.status !== 'settled');
   const lentOut   = unsettled.filter((r) => r.type === 'lent')
@@ -324,8 +347,10 @@ function PersonSettleModal({
   const borrowedOut = unsettled.filter((r) => r.type === 'borrowed')
     .reduce((s, r) => s + (r.amount - r.settled_amount), 0);
   const net = lentOut - borrowedOut;
+  const fullNet = Math.abs(net);
 
   const [accountId, setAccountId] = useState('__none__');
+  const [settleAmount, setSettleAmount] = useState(fullNet);
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -351,14 +376,26 @@ function PersonSettleModal({
             <div className="flex justify-between px-4 py-2.5 font-semibold">
               <span className="text-slate-300">Net to {net >= 0 ? 'receive' : 'pay'}</span>
               <span className={net >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                {formatCurrency(Math.abs(net))}
+                {formatCurrency(fullNet)}
               </span>
             </div>
           </div>
 
-          <p className="text-xs text-slate-500">
-            {unsettled.length} record{unsettled.length !== 1 ? 's' : ''} will be marked as settled.
-          </p>
+          {/* Partial amount */}
+          <div className="space-y-1.5">
+            <Label>Amount {net >= 0 ? 'Received' : 'Paid'} (₹)</Label>
+            <Input
+              type="number"
+              value={settleAmount}
+              onChange={(e) => setSettleAmount(Math.min(parseFloat(e.target.value) || 0, fullNet))}
+            />
+            {settleAmount < fullNet && settleAmount > 0 && (
+              <p className="text-xs text-amber-400">Partial settlement — records will be updated proportionally.</p>
+            )}
+          </div>
+          <Button variant="ghost" className="w-full -mt-1" onClick={() => setSettleAmount(fullNet)}>
+            Full Amount ({formatCurrency(fullNet)})
+          </Button>
 
           {/* Account picker */}
           <div className="space-y-1.5">
@@ -385,9 +422,9 @@ function PersonSettleModal({
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button
               className="bg-emerald-700 hover:bg-emerald-600 text-white"
-              onClick={() => { onSettle(accountId === '__none__' ? '' : accountId); onClose(); }}
+              onClick={() => { onSettle(accountId === '__none__' ? '' : accountId, settleAmount); onClose(); }}
             >
-              <CheckCircle className="h-4 w-4 mr-1.5" /> Settle All
+              <CheckCircle className="h-4 w-4 mr-1.5" /> {settleAmount >= fullNet ? 'Settle All' : 'Settle Partial'}
             </Button>
           </div>
         </div>
@@ -761,28 +798,33 @@ export default function MoneyTrackerPage() {
     deleteRecord(r.id);
   };
 
-  const handlePersonSettle = (accountId: string) => {
+  const handlePersonSettle = (accountId: string, settleAmount: number) => {
     if (!personSettleTarget) return;
     const unsettled = personSettleTarget.records.filter((r) => r.status !== 'settled');
     const lentOut = unsettled.filter((r) => r.type === 'lent')
       .reduce((s, r) => s + (r.amount - r.settled_amount), 0);
     const borrowedOut = unsettled.filter((r) => r.type === 'borrowed')
       .reduce((s, r) => s + (r.amount - r.settled_amount), 0);
+    const net = lentOut - borrowedOut;
 
-    // Mark every unsettled record as fully settled
-    unsettled.forEach((r) => markSettled(r.id, r.amount - r.settled_amount));
+    // Distribute settleAmount sequentially across unsettled records
+    let remaining = settleAmount;
+    unsettled.forEach((r) => {
+      if (remaining <= 0) return;
+      const outstanding = r.amount - r.settled_amount;
+      const toSettle = Math.min(outstanding, remaining);
+      markSettled(r.id, toSettle);
+      remaining -= toSettle;
+    });
 
     // Log a single transaction on the chosen account
-    if (accountId) {
-      const net = lentOut - borrowedOut;
-      if (net !== 0) {
-        addTransaction(accountId, {
-          date: new Date().toISOString().split('T')[0],
-          type: net > 0 ? 'credit' : 'debit',
-          amount: Math.abs(net),
-          note: `Settlement — ${personSettleTarget.name}`,
-        });
-      }
+    if (accountId && settleAmount > 0) {
+      addTransaction(accountId, {
+        date: new Date().toISOString().split('T')[0],
+        type: net > 0 ? 'credit' : 'debit',
+        amount: settleAmount,
+        note: `Settlement — ${personSettleTarget.name}`,
+      });
     }
     setPersonSettleTarget(null);
   };
@@ -966,8 +1008,19 @@ export default function MoneyTrackerPage() {
       {settleTarget && (
         <SettleModal
           record={settleTarget}
+          accounts={accounts}
           onClose={() => setSettleTarget(null)}
-          onSettle={(amount) => markSettled(settleTarget.id, amount)}
+          onSettle={(amount, accountId) => {
+            markSettled(settleTarget.id, amount);
+            if (accountId) {
+              addTransaction(accountId, {
+                date: new Date().toISOString().split('T')[0],
+                type: settleTarget.type === 'lent' ? 'credit' : 'debit',
+                amount,
+                note: `Settlement — ${settleTarget.person_name}${settleTarget.description ? ` — ${settleTarget.description}` : ''}`,
+              });
+            }
+          }}
         />
       )}
 
@@ -977,7 +1030,7 @@ export default function MoneyTrackerPage() {
           records={personSettleTarget.records}
           accounts={accounts}
           onClose={() => setPersonSettleTarget(null)}
-          onSettle={handlePersonSettle}
+          onSettle={(accountId, amount) => handlePersonSettle(accountId, amount)}
         />
       )}
     </div>

@@ -96,6 +96,7 @@ interface InvestmentStore {
   addInvestment: (investment: Omit<Investment, 'id'>) => void;
   updateInvestment: (id: string, investment: Partial<Investment>) => void;
   deleteInvestment: (id: string) => void;
+  sellInvestment: (id: string, saleData: Pick<Investment, 'sold_price' | 'sold_date' | 'sale_charges' | 'credited_to_account_id' | 'credited_to_account_name'>) => void;
 }
 
 export const useInvestmentStore = create<InvestmentStore>()((set, get) => ({
@@ -163,5 +164,13 @@ export const useInvestmentStore = create<InvestmentStore>()((set, get) => ({
     set({ investments: all.filter((inv) => inv.id !== id) });
     // File: keep as soft-deleted tombstone so mergeById never resurrects it
     saveToFile(all.map((inv) => inv.id === id ? { ...inv, _deleted: true } : inv));
+  },
+
+  sellInvestment: (id, saleData) => {
+    const updated = get().investments.map((inv) =>
+      inv.id === id ? { ...inv, status: 'sold' as const, ...saleData } : inv
+    );
+    set({ investments: updated });
+    saveToFile(updated);
   },
 }));

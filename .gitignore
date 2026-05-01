@@ -11,6 +11,7 @@ out/
 data/*
 !data/portfolio.example.json
 !data/daily-tracker.example.json
+!data/daily-planner.example.json
 
 # Environment variables
 .env

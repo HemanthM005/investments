@@ -9,12 +9,19 @@ export interface Investment {
   purchase_date: string;
   notes: string;
   ticker?: string;          // CoinGecko ID for Crypto, Yahoo Finance for stocks, AMFI code for MF
-  status?: 'active' | 'watchlist';  // omitted = active
+  status?: 'active' | 'watchlist' | 'sold';  // omitted = active
   buy_range?: string;       // watchlist only — target entry range e.g. "3500-3750"
   research?: string;        // long-form research notes (shown in popup)
   funded_by_account_id?: string;   // AssetAccount.id — account debited when purchased
   funded_by_account_name?: string; // snapshot of account name at purchase time
   _deleted?: boolean;       // soft-delete tombstone — filtered from UI, kept in file
+  // Sale details — populated when status === 'sold'
+  sold_price?: number;               // per-unit sale price
+  sold_date?: string;                // YYYY-MM-DD
+  sale_charges?: number;             // total charges (brokerage + STT + GST etc.)
+  credited_to_account_id?: string;   // AssetAccount.id — account credited on sale
+  credited_to_account_name?: string; // snapshot of account name at sale time
+  sale_credited?: boolean;           // true once credit transaction was successfully written to the account
 }
 
 export interface MoneyRecord {
@@ -69,13 +76,15 @@ export interface AssetAccount {
 export type ExpenseCategory =
   | 'Food & Dining'
   | 'Groceries'
-  | 'Transport'
+  | 'Transport & Travel'
   | 'Shopping'
   | 'Entertainment'
   | 'Health & Medical'
   | 'Bills & Utilities'
   | 'Education'
-  | 'Travel'
+  | 'Trips & Vacations'
+  | 'Sports & Fitness'
+  | 'Loan & EMI'
   | 'Rent'
   | 'Subscriptions'
   | 'Personal Care'
@@ -150,4 +159,25 @@ export interface HabitLog {
   habit_id: string;
   date: string;    // YYYY-MM-DD
   count?: number;  // for type='count' habits; undefined for boolean habits
+}
+
+export type PlannerCategory = 'Morning Routine' | 'Study' | 'Work' | 'Exercise' | 'Meals' | 'Leisure' | 'Sleep' | 'Other';
+export type PlannerDayType = 'weekday' | 'weekend' | 'all';
+
+export interface PlannerItem {
+  id: string;
+  name: string;
+  emoji: string;
+  start_time: string;   // "08:00" 24h format
+  end_time: string;     // "10:00"
+  day_type: PlannerDayType;
+  category: PlannerCategory;
+  color: string;
+  active: boolean;
+  created_at: string;   // YYYY-MM-DD
+}
+
+export interface PlannerLog {
+  item_id: string;
+  date: string;   // YYYY-MM-DD
 }

@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 export default function DashboardPage() {
   const investments = useInvestmentStore((s) => s.investments);
   const activeInvestments = useMemo(
-    () => investments.filter((inv) => inv.status !== 'watchlist'),
+    () => investments.filter((inv) => !inv.status || inv.status === 'active'),
     [investments]
   );
   const moneyRecords = useMoneyStore((s) => s.records);
