@@ -30,31 +30,78 @@ const INTERVAL: Record<HistoryRange, string> = {
   '2y':  '1wk',
 };
 
+// ── Yahoo crumb / cookie (cached 24h) — chart endpoint sometimes 401s without it
+const CRUMB_TTL = 24 * 60 * 60 * 1000;
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+let crumbCache: { cookie: string; fetchedAt: number } | null = null;
+
+async function getYahooCookie(): Promise<string | null> {
+  if (crumbCache && Date.now() - crumbCache.fetchedAt < CRUMB_TTL) return crumbCache.cookie;
+  try {
+    const res = await fetch('https://fc.yahoo.com', {
+      headers: { 'User-Agent': UA, Accept: '*/*' },
+      redirect: 'manual',
+      cache: 'no-store',
+    });
+    const setCookie = res.headers.get('set-cookie') ?? '';
+    const cookie = setCookie
+      .split(/,(?=\s*[A-Za-z0-9_-]+=)/)
+      .map((c) => c.split(';')[0].trim())
+      .filter(Boolean)
+      .join('; ');
+    if (!cookie) return null;
+    crumbCache = { cookie, fetchedAt: Date.now() };
+    return cookie;
+  } catch {
+    return null;
+  }
+}
+
 // ── Yahoo Finance chart (primary — no key needed) ─────────────────────────────
 async function fetchYahoo(ticker: string, range: HistoryRange): Promise<PricePoint[]> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=${range}&interval=${INTERVAL[range]}`;
+  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=${range}&interval=${INTERVAL[range]}`;
+  const cookie = await getYahooCookie();
   const res = await fetch(url, {
-    headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' },
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': UA,
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
     cache: 'no-store',
   });
+  if (res.status === 401 || res.status === 403) {
+    crumbCache = null;
+    const retryCookie = await getYahooCookie();
+    if (retryCookie) {
+      const retryRes = await fetch(url, {
+        headers: { Accept: 'application/json', 'User-Agent': UA, Cookie: retryCookie },
+        cache: 'no-store',
+      });
+      if (retryRes.ok) return parseYahooChart(await retryRes.json());
+    }
+    throw new Error(`Yahoo Finance ${res.status}`);
+  }
   if (!res.ok) throw new Error(`Yahoo Finance ${res.status}`);
+  return parseYahooChart(await res.json());
+}
 
-  const json = await res.json() as {
-    chart: {
-      result: Array<{
-        timestamp: number[];
-        indicators: { quote: Array<{ open: number[]; high: number[]; low: number[]; close: number[]; volume: number[] }> };
+function parseYahooChart(json: unknown): PricePoint[] {
+  const j = json as {
+    chart?: {
+      result?: Array<{
+        timestamp?: number[];
+        indicators?: { quote?: Array<{ open?: number[]; high?: number[]; low?: number[]; close?: number[]; volume?: number[] }> };
       }> | null;
-      error: unknown;
+      error?: unknown;
     };
   };
 
-  if (json.chart?.error) throw new Error(String(json.chart.error));
-  const r = json.chart?.result?.[0];
+  if (j.chart?.error) throw new Error(String(j.chart.error));
+  const r = j.chart?.result?.[0];
   if (!r) throw new Error('No data from Yahoo Finance');
 
   const timestamps = r.timestamp ?? [];
-  const q = r.indicators.quote[0] ?? {};
+  const q = r.indicators?.quote?.[0] ?? {};
   const points: PricePoint[] = [];
 
   for (let i = 0; i < timestamps.length; i++) {
