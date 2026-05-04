@@ -88,10 +88,20 @@ Read the diffs of files you intend to stage and scan added lines for obvious cre
   ```
 - Capture the PR URL from the command output.
 
+### Step 7 — Delete the local branch
+After the PR is opened successfully:
+- Capture the branch name (already known from Step 1).
+- Switch to `main`: `git checkout main`.
+- Delete the local branch: `git branch -D <branch>`.
+  - Use `-D` (force) because the branch has commits not yet merged into `main` — the work is preserved on the remote PR branch.
+  - If `git checkout main` fails (e.g. dirty tree from a hook artifact), STOP and report; do not delete.
+- Do NOT delete the remote branch — the PR needs it. GitHub will auto-clean it on merge if the repo has "Automatically delete head branches" enabled.
+
 ## Reporting back
 Give the user, in this order:
 1. PR URL (the headline result)
 2. One- or two-line commit summary
-3. Anything skipped or excluded (and why)
+3. Confirmation that the local branch was deleted (and that you're now on `main`)
+4. Anything skipped or excluded (and why)
 
 Keep the report tight.
