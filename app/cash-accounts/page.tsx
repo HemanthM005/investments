@@ -284,9 +284,31 @@ function TransactionModal({ account, defaultType, allAccounts, existingPeople, o
 
           {/* Amount */}
           <div className="space-y-1.5">
-            <Label>Amount (₹) *</Label>
+            <div className="flex items-center justify-between">
+              <Label>Amount (₹) *</Label>
+              {isCreditCard && mode === 'credit' && account.balance !== 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setAmount(Math.abs(account.balance).toString()); setError(''); }}
+                  className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors font-medium"
+                >
+                  Pay Full Bill (₹{Math.abs(account.balance).toLocaleString('en-IN')})
+                </button>
+              )}
+            </div>
             <Input type="number" step="0.01" placeholder="0.00" autoFocus={mode !== 'lent'}
               value={amount} onChange={(e) => { setAmount(e.target.value); setError(''); }} />
+            {isCreditCard && mode === 'credit' && account.balance !== 0 && (
+              <p className="text-xs text-slate-500">
+                Outstanding bill: <span className="text-red-400 font-medium">₹{Math.abs(account.balance).toLocaleString('en-IN')}</span>
+                {amt > 0 && amt < Math.abs(account.balance) && (
+                  <span className="ml-2 text-amber-400">· ₹{(Math.abs(account.balance) - amt).toLocaleString('en-IN')} remaining after this payment</span>
+                )}
+                {amt > Math.abs(account.balance) && (
+                  <span className="ml-2 text-amber-400">· over by ₹{(amt - Math.abs(account.balance)).toLocaleString('en-IN')}</span>
+                )}
+              </p>
+            )}
           </div>
 
           {/* Note */}

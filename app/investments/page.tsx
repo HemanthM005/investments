@@ -46,12 +46,27 @@ function apiType(assetType: string): 'crypto' | 'stock' | 'mf' | 'gold' {
   return 'stock';
 }
 
+// Bond current value = principal + simple interest accrued (capped at maturity)
+function bondAccruedValue(inv: Investment): number {
+  if (inv.asset_type !== 'Bond' || !inv.interest_rate || !inv.purchase_date) return inv.current_price;
+  const start = new Date(inv.purchase_date + 'T00:00:00').getTime();
+  let end = Date.now();
+  if (inv.maturity_date) {
+    const m = new Date(inv.maturity_date + 'T00:00:00').getTime();
+    if (m < end) end = m;
+  }
+  if (!isFinite(start) || end <= start) return inv.buy_price;
+  const years = (end - start) / (1000 * 60 * 60 * 24 * 365.25);
+  return Math.round(inv.buy_price * (1 + inv.interest_rate / 100 * years) * 100) / 100;
+}
+
 const ASSET_TYPE_COLORS: Record<string, string> = {
   Stock: 'bg-indigo-900/50 text-indigo-300',
   ETF: 'bg-purple-900/50 text-purple-300',
   Crypto: 'bg-orange-900/50 text-orange-300',
   'Mutual Fund': 'bg-blue-900/50 text-blue-300',
   Gold: 'bg-yellow-900/50 text-yellow-300',
+  Bond: 'bg-teal-900/50 text-teal-300',
   Other: 'bg-slate-700/50 text-slate-300',
 };
 
@@ -68,10 +83,18 @@ export default function InvestmentsPage() {
   const [sellTarget, setSellTarget]     = useState<Investment | null>(null);
   const [editSaleTarget, setEditSaleTarget] = useState<Investment | null>(null);
 
+  // Project bond current prices to today's accrued value (without persisting)
+  const projectedInvestments = useMemo(
+    () => investments.map((inv) =>
+      inv.asset_type === 'Bond' ? { ...inv, current_price: bondAccruedValue(inv) } : inv
+    ),
+    [investments],
+  );
+
   // Split active vs watchlist vs sold — must come before ticker memos
-  const activeInvestments  = useMemo(() => investments.filter((inv) => !inv.status || inv.status === 'active'), [investments]);
-  const watchlistItems     = useMemo(() => investments.filter((inv) => inv.status === 'watchlist'), [investments]);
-  const soldInvestments    = useMemo(() => investments.filter((inv) => inv.status === 'sold'), [investments]);
+  const activeInvestments  = useMemo(() => projectedInvestments.filter((inv) => !inv.status || inv.status === 'active'), [projectedInvestments]);
+  const watchlistItems     = useMemo(() => projectedInvestments.filter((inv) => inv.status === 'watchlist'), [projectedInvestments]);
+  const soldInvestments    = useMemo(() => projectedInvestments.filter((inv) => inv.status === 'sold'), [projectedInvestments]);
 
   // ── Live price refresh ────────────────────────────────────────────────────
   const [refreshingIds, setRefreshingIds] = useState<Set<string>>(new Set());
@@ -560,6 +583,12 @@ export default function InvestmentsPage() {
                               <Info className={`h-3.5 w-3.5 flex-shrink-0 ${inv.research ? 'text-indigo-500 group-hover:text-indigo-300' : 'text-slate-600 group-hover:text-slate-400'}`} />
                             </button>
                           </div>
+                          {inv.asset_type === 'Bond' && (
+                            <p className="text-[10px] text-teal-400/80 mt-0.5">
+                              @{inv.interest_rate ?? 0}% p.a.
+                              {inv.maturity_date && <span className="text-slate-500"> · matures {inv.maturity_date}</span>}
+                            </p>
+                          )}
                         </TableCell>
                         <TableCell>
                           <span

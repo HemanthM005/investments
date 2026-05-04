@@ -17,6 +17,7 @@ const ASSET_TYPE_COLORS: Record<string, string> = {
   Crypto: 'bg-orange-900/50 text-orange-300',
   'Mutual Fund': 'bg-blue-900/50 text-blue-300',
   Gold: 'bg-yellow-900/50 text-yellow-300',
+  Bond: 'bg-teal-900/50 text-teal-300',
   Other: 'bg-slate-700/50 text-slate-300',
 };
 
