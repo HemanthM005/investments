@@ -1,11 +1,11 @@
 export interface Investment {
   id: string;
   asset_name: string;
-  asset_type: 'Stock' | 'ETF' | 'Crypto' | 'Mutual Fund' | 'Gold' | 'Other';
+  asset_type: 'Stock' | 'ETF' | 'Crypto' | 'Mutual Fund' | 'Gold' | 'Bond' | 'Other';
   sector: string;
-  buy_price: number;
-  current_price: number;
-  quantity: number;
+  buy_price: number;        // for Bond: principal invested per unit (typically face value)
+  current_price: number;    // for Bond: current value (auto-computed from interest accrual)
+  quantity: number;         // for Bond: usually 1, or # of units
   purchase_date: string;
   notes: string;
   ticker?: string;          // CoinGecko ID for Crypto, Yahoo Finance for stocks, AMFI code for MF
@@ -14,6 +14,8 @@ export interface Investment {
   research?: string;        // long-form research notes (shown in popup)
   funded_by_account_id?: string;   // AssetAccount.id — account debited when purchased
   funded_by_account_name?: string; // snapshot of account name at purchase time
+  interest_rate?: number;   // Bond only — coupon/interest rate % p.a.
+  maturity_date?: string;   // Bond only — YYYY-MM-DD when bond matures
   _deleted?: boolean;       // soft-delete tombstone — filtered from UI, kept in file
   // Sale details — populated when status === 'sold'
   sold_price?: number;               // per-unit sale price

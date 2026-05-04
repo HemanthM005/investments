@@ -141,6 +141,15 @@ function ExpenseModal({
   const [splitMethod, setSplitMethod] = useState<'equal' | 'shares' | 'percent' | 'custom'>(
     (initial.id && initial.splits && initial.splits.length > 0) ? 'custom' : 'equal',
   );
+  // Whether "You" are part of the split. False = others owe the full amount; you only paid.
+  const [includeMe, setIncludeMe] = useState<boolean>(() => {
+    if (initial.id && initial.splits && initial.splits.length > 0) {
+      const othersTotal = initial.splits.reduce((s, sp) => s + sp.amount, 0);
+      const youAmt = Math.round(((initial.amount || 0) - othersTotal) * 100) / 100;
+      return youAmt > 0.01;
+    }
+    return true;
+  });
   const [participants, setParticipants] = useState<SplitParticipant[]>(() => {
     if (initial.id && initial.splits && initial.splits.length > 0) {
       const othersTotal = initial.splits.reduce((s, sp) => s + sp.amount, 0);
@@ -158,13 +167,19 @@ function ExpenseModal({
     return [{ id: 'you', name: 'You', isYou: true, value: 1 }];
   });
 
+  // Active participants for math: skips "You" when includeMe is off
+  const activeParticipants = participants.filter((p) => !p.isYou || includeMe);
+
   function getParticipantAmount(p: SplitParticipant): number {
     if (!form.amount) return 0;
+    if (p.isYou && !includeMe) return 0;
     switch (splitMethod) {
       case 'equal':
-        return Math.round((form.amount / participants.length) * 100) / 100;
+        return activeParticipants.length === 0
+          ? 0
+          : Math.round((form.amount / activeParticipants.length) * 100) / 100;
       case 'shares': {
-        const total = participants.reduce((s, x) => s + (x.value ?? 0), 0);
+        const total = activeParticipants.reduce((s, x) => s + (x.value ?? 0), 0);
         if (total === 0) return 0;
         return Math.round(((p.value ?? 0) / total) * form.amount * 100) / 100;
       }
@@ -179,8 +194,9 @@ function ExpenseModal({
     }
   }
 
-  const percentTotal = participants.reduce((s, p) => s + (p.value || 0), 0);
+  const percentTotal = activeParticipants.reduce((s, p) => s + (p.value || 0), 0);
   const percentValid = splitMethod !== 'percent' || Math.abs(percentTotal - 100) < 0.01;
+  const hasOtherParticipants = participants.some((p) => !p.isYou && p.name.trim());
 
   function addParticipant() {
     setParticipants((prev) => [...prev, { id: crypto.randomUUID(), name: '', isYou: false, value: 1 }]);
@@ -250,7 +266,8 @@ function ExpenseModal({
 
   const paidByOther = splitEnabled && paidBy !== 'me'
     && participants.filter((p) => !p.isYou && p.name.trim()).some((p) => p.name === paidBy);
-  const canSave = form.description.trim().length > 0 && form.amount > 0 && (!splitEnabled || percentValid) && (paidByOther || multiValid);
+  const splitsOk = !splitEnabled || includeMe || hasOtherParticipants;
+  const canSave = form.description.trim().length > 0 && form.amount > 0 && (!splitEnabled || percentValid) && (paidByOther || multiValid) && splitsOk;
 
   // Group accounts by category for a cleaner picker
   const grouped = useMemo(() => {
@@ -493,9 +510,25 @@ function ExpenseModal({
                   ))}
                 </div>
 
+                {/* Include-me toggle */}
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includeMe}
+                    onChange={(e) => setIncludeMe(e.target.checked)}
+                    className="rounded border-slate-600 accent-indigo-500"
+                  />
+                  <span className="text-xs text-slate-400">
+                    Include me in this split
+                    {!includeMe && (
+                      <span className="ml-1 text-amber-400">— you only paid; others owe the full amount</span>
+                    )}
+                  </span>
+                </label>
+
                 {/* Participant rows */}
                 <div className="space-y-2">
-                  {participants.map((p) => (
+                  {participants.filter((p) => !p.isYou || includeMe).map((p) => (
                     <div key={p.id} className="flex items-center gap-2">
                       {p.isYou ? (
                         <span className="flex-1 text-sm text-slate-500 px-3 py-1.5 bg-[#0f1117] border border-[#2a2d3e] rounded-lg">

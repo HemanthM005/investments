@@ -34,6 +34,7 @@ const ASSET_TYPES: Investment['asset_type'][] = [
   'Crypto',
   'Mutual Fund',
   'Gold',
+  'Bond',
   'Other',
 ];
 
@@ -51,7 +52,23 @@ const EMPTY_FORM: Omit<Investment, 'id'> = {
   buy_range: '',
   funded_by_account_id: '',
   funded_by_account_name: '',
+  interest_rate: 0,
+  maturity_date: '',
 };
+
+// Bond current value = principal + simple interest accrued from purchase to today (capped at maturity)
+function computeBondCurrentValue(principal: number, ratePct: number, purchaseDate: string, maturityDate?: string): number {
+  if (!principal || !ratePct || !purchaseDate) return principal || 0;
+  const start = new Date(purchaseDate + 'T00:00:00').getTime();
+  let end = Date.now();
+  if (maturityDate) {
+    const m = new Date(maturityDate + 'T00:00:00').getTime();
+    if (m < end) end = m;
+  }
+  if (!isFinite(start) || end <= start) return principal;
+  const years = (end - start) / (1000 * 60 * 60 * 24 * 365.25);
+  return Math.round(principal * (1 + (ratePct / 100) * years) * 100) / 100;
+}
 
 export default function InvestmentModal({ open, onClose, onSubmit, initialData }: Props) {
   const [form, setForm] = useState<Omit<Investment, 'id'>>(EMPTY_FORM);
@@ -71,16 +88,24 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
   }, [initialData, open]);
 
   const isWatchlist = form.status === 'watchlist';
+  const isBond = form.asset_type === 'Bond';
 
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.asset_name.trim()) e.asset_name = 'Asset name is required';
     if (!form.sector.trim()) e.sector = 'Sector is required';
-    if (form.current_price <= 0) e.current_price = 'Current price must be greater than 0';
-    if (!isWatchlist) {
-      if (form.buy_price <= 0) e.buy_price = 'Buy price must be greater than 0';
-      if (form.quantity <= 0) e.quantity = 'Quantity must be greater than 0';
+    if (isBond && !isWatchlist) {
+      if (form.buy_price <= 0) e.buy_price = 'Principal must be greater than 0';
+      if ((form.interest_rate ?? 0) <= 0) e.interest_rate = 'Interest rate must be greater than 0';
+      if (!form.maturity_date) e.maturity_date = 'Maturity date is required';
       if (!form.purchase_date) e.purchase_date = 'Purchase date is required';
+    } else {
+      if (form.current_price <= 0) e.current_price = 'Current price must be greater than 0';
+      if (!isWatchlist) {
+        if (form.buy_price <= 0) e.buy_price = 'Buy price must be greater than 0';
+        if (form.quantity <= 0) e.quantity = 'Quantity must be greater than 0';
+        if (!form.purchase_date) e.purchase_date = 'Purchase date is required';
+      }
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -89,7 +114,17 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    onSubmit(form);
+    if (isBond && !isWatchlist) {
+      const principal = form.buy_price;
+      const current = computeBondCurrentValue(principal, form.interest_rate ?? 0, form.purchase_date, form.maturity_date);
+      onSubmit({
+        ...form,
+        quantity: form.quantity > 0 ? form.quantity : 1,
+        current_price: current,
+      });
+    } else {
+      onSubmit(form);
+    }
   };
 
   const setField = <K extends keyof typeof form>(key: K, value: typeof form[K]) => {
@@ -176,6 +211,101 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
                   <Input id="buy_range" placeholder="low-high" value={form.buy_range ?? ''}
                     onChange={(e) => setField('buy_range', e.target.value)} />
                 </div>
+              </>
+            ) : isBond ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="buy_price">Principal Invested (₹) *</Label>
+                  <Input id="buy_price" type="number" step="1" placeholder="e.g. 100000"
+                    value={form.buy_price || ''}
+                    onChange={(e) => setField('buy_price', parseFloat(e.target.value) || 0)} />
+                  {errors.buy_price && <p className="text-xs text-red-400">{errors.buy_price}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="interest_rate">Interest Rate (% p.a.) *</Label>
+                  <Input id="interest_rate" type="number" step="0.01" placeholder="e.g. 7.5"
+                    value={form.interest_rate || ''}
+                    onChange={(e) => setField('interest_rate', parseFloat(e.target.value) || 0)} />
+                  {errors.interest_rate && <p className="text-xs text-red-400">{errors.interest_rate}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="purchase_date">Purchase Date *</Label>
+                  <Input id="purchase_date" type="date" value={form.purchase_date}
+                    onChange={(e) => setField('purchase_date', e.target.value)} />
+                  {errors.purchase_date && <p className="text-xs text-red-400">{errors.purchase_date}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="maturity_date">Maturity Date *</Label>
+                  <Input id="maturity_date" type="date" value={form.maturity_date ?? ''}
+                    onChange={(e) => setField('maturity_date', e.target.value)} />
+                  {errors.maturity_date && <p className="text-xs text-red-400">{errors.maturity_date}</p>}
+                </div>
+
+                {form.buy_price > 0 && (form.interest_rate ?? 0) > 0 && form.purchase_date && (() => {
+                  const todayVal = computeBondCurrentValue(form.buy_price, form.interest_rate ?? 0, form.purchase_date, form.maturity_date);
+                  let maturityVal: number | null = null;
+                  if (form.maturity_date) {
+                    const start = new Date(form.purchase_date + 'T00:00:00').getTime();
+                    const end = new Date(form.maturity_date + 'T00:00:00').getTime();
+                    if (end > start) {
+                      const years = (end - start) / (1000 * 60 * 60 * 24 * 365.25);
+                      maturityVal = Math.round(form.buy_price * (1 + (form.interest_rate ?? 0) / 100 * years) * 100) / 100;
+                    }
+                  }
+                  return (
+                    <div className="col-span-2 rounded-md border border-emerald-800/40 bg-emerald-950/20 px-3 py-2 text-xs text-emerald-300">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Current value (today, simple interest):</span>
+                        <span className="font-semibold">₹{todayVal.toLocaleString('en-IN')}</span>
+                      </div>
+                      {maturityVal !== null && (
+                        <div className="flex items-center justify-between mt-0.5">
+                          <span className="text-slate-400">Value at maturity:</span>
+                          <span className="font-semibold">₹{maturityVal.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {!initialData && (
+                  <div className="col-span-2 space-y-1.5">
+                    <Label>Funded From Account</Label>
+                    <Select
+                      value={form.funded_by_account_id || '__none__'}
+                      onValueChange={(v) => {
+                        if (v === '__none__') {
+                          setField('funded_by_account_id', '');
+                          setField('funded_by_account_name', '');
+                        } else {
+                          const acc = accounts.find((a) => a.id === v);
+                          setField('funded_by_account_id', v);
+                          setField('funded_by_account_name', acc?.name ?? '');
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select account (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None / Don&apos;t track</SelectItem>
+                        {accounts.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name}
+                            <span className="ml-1.5 text-xs text-slate-400">({a.category})</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500">
+                      Selecting an account will log a debit of{' '}
+                      <span className="text-indigo-400 font-medium">
+                        ₹{(form.buy_price || 0).toLocaleString('en-IN')}
+                      </span>
+                      {' '}against it.
+                    </p>
+                  </div>
+                )}
               </>
             ) : (
               <>

@@ -2,23 +2,29 @@
 
 ## ⚠️ Data Privacy Rules (Read First)
 
-**NEVER commit personal data files.** Before any `git add`, verify these are gitignored:
-- `data/portfolio.json` — live personal data
-- `data/*.json.bak*` — backup snapshots
-- Any file containing real names, balances, or transaction history
+**NEVER commit personal data files.** The app stores private data across multiple JSON files in `data/`. Before any `git add`, verify these are gitignored:
+- `data/portfolio.json` — investments, expenses, accounts, money records, subscriptions
+- `data/daily-tracker.json` — habit tracker data
+- `data/daily-planner.json` — daily planner data
+- `data/*.bak*` / `data/*.json.bak*` — backup snapshots of any of the above
+- Any new `data/*.json` file added in the future (the `.gitignore` rule `data/*` blocks everything except explicitly whitelisted examples)
+- Any file containing real names, balances, transaction history, or personal logs
+
+The **only** files in `data/` that may ever be committed are the `*.example.json` files, currently:
+- `data/portfolio.example.json`
+- `data/daily-tracker.example.json`
+- `data/daily-planner.example.json`
 
 If you find a sensitive file tracked by git: run `git rm --cached <file>` immediately, add it to `.gitignore`, then commit the fix before anything else.
 
-**NEVER directly modify `data/portfolio.json` or any file whose name contains `portfolio.json`** — not via shell commands, not via Node scripts, not via migrations baked into app code (e.g. inside `hydrate()`). This applies every session without exception.
+**NEVER directly modify any private data file in `data/`** — this includes `portfolio.json`, `daily-tracker.json`, `daily-planner.json`, any of their `.bak*` variants, or any future private data file. Not via shell commands, not via Node scripts, not via migrations baked into app code (e.g. inside `hydrate()`). The app itself writes to these files through `/api/data`; you should not. This applies every session without exception.
 
-If the user explicitly asks to modify the file, stop and ask: **"Are you sure you want me to directly modify portfolio.json?"** before doing anything.
-
-The only data file that should ever be committed is `data/portfolio.example.json`.
+If the user explicitly asks you to modify a private data file, stop and ask: **"Are you sure you want me to directly modify `<filename>`?"** before doing anything.
 
 ---
 
 ## Project Overview
-A personal finance dashboard built with Next.js 15 (App Router), TypeScript, TailwindCSS, Recharts, and Zustand. All data persists to `data/portfolio.json` via server-side API routes — no external database.
+A personal finance + life-tracking dashboard built with Next.js 15 (App Router), TypeScript, TailwindCSS, Recharts, and Zustand. All data persists to JSON files under `data/` via server-side API routes — no external database. The app spans investments, expenses, cash/account management, lent/borrowed tracking, subscriptions, a habit tracker, and a daily planner.
 
 ## Commands
 ```bash
@@ -46,6 +52,8 @@ npm run lint    # Lint check
 | `/cash-accounts` | Cash & account manager — balances, transactions, transfers |
 | `/money-tracker` | Lent/borrowed tracker — net balance per person |
 | `/subscriptions` | Recurring expense tracker |
+| `/habit-tracker` | Daily habit tracker — streaks, completions |
+| `/planner` | Daily planner — tasks, schedule, notes per day |
 | `/india-sectors-report` | India emerging sectors research report |
 | `/invest-3-lakhs-plan` | ₹3 Lakh investment plan guide |
 
@@ -58,17 +66,26 @@ npm run lint    # Lint check
 | `lib/expenseStore.ts` | Zustand store — expenses CRUD + auto-deducts account balances |
 | `lib/moneyStore.ts` | Zustand store — lent/borrowed records CRUD |
 | `lib/recurringStore.ts` | Zustand store — recurring/subscription expenses |
-| `lib/saveHelper.ts` | Writes sections of portfolio.json via `/api/data` |
+| `lib/habitStore.ts` | Zustand store — habit tracker (`data/daily-tracker.json`) |
+| `lib/plannerStore.ts` | Zustand store — daily planner (`data/daily-planner.json`) |
+| `lib/appStore.ts` | App-wide UI state (demo mode, hydration flags, etc.) |
+| `lib/saveHelper.ts` | Writes sections of `data/*.json` via `/api/data` |
 | `lib/utils.ts` | `cn()`, `formatCurrency()`, `formatPercent()`, `computeStats()` |
-| `app/api/data/route.ts` | Read/write sections of `data/portfolio.json` |
+| `app/api/data/route.ts` | Read/write sections of `data/portfolio.json`, `data/daily-tracker.json`, `data/daily-planner.json` |
 | `app/api/prices/route.ts` | Fetch live prices (CoinGecko for crypto, Yahoo Finance for stocks) |
 | `app/api/price-history/route.ts` | Fetch historical price data for charts |
 | `app/api/stock-analysis/route.ts` | AI-powered stock analysis via Claude API |
 | `components/Navbar.tsx` | Sticky top nav with active route highlighting |
+| `components/HydrationProvider.tsx` | Top-level provider that hydrates all Zustand stores from server data on mount |
+| `components/SaveErrorBanner.tsx` | Banner shown when a save to `/api/data` fails |
 | `components/InvestmentModal.tsx` | Add/Edit investment modal |
+| `components/SellInvestmentModal.tsx` | Sell investment flow — partial/full sell, proceeds to account |
+| `components/InvestmentTable.tsx` | Investments list table with filters and row actions |
+| `components/ResearchModal.tsx` | View/edit long-form research notes for an investment |
 | `components/StockAnalysisDrawer.tsx` | AI research drawer for investments |
-| `components/CompareRadarChart.tsx` | Radar chart for stock comparison |
+| `components/PortfolioStats.tsx` | Headline KPI cards on the dashboard |
 | `components/PortfolioCharts.tsx` | Pie + Bar charts for dashboard |
+| `components/CompareRadarChart.tsx` | Radar chart for stock comparison |
 
 ## Data Model
 
@@ -157,8 +174,15 @@ interface AssetAccount {
 3. Add the route to `navLinks` in `components/Navbar.tsx`
 
 ## Data Persistence
-All data lives in `data/portfolio.json` (gitignored). The file is split into sections:
-- `investments`, `expenses`, `money_records`, `accounts`, `recurring_expenses`
+All data lives under `data/` (gitignored — see Data Privacy Rules at the top). Each domain has its own file:
 
-On first load, if the file doesn't exist, the app falls back to `data/portfolio.example.json`.
-To reset your data, delete `data/portfolio.json` — it will be recreated from the example.
+| File | Sections / contents | Example fallback |
+|------|---------------------|------------------|
+| `data/portfolio.json` | `investments`, `expenses`, `money_records`, `accounts`, `recurring_expenses` | `portfolio.example.json` |
+| `data/daily-tracker.json` | Habit tracker entries — habits, daily completions, streaks | `daily-tracker.example.json` |
+| `data/daily-planner.json` | Daily planner entries — tasks, schedule blocks, notes per date | `daily-planner.example.json` |
+
+On first load, if a private file doesn't exist, the app falls back to its corresponding `*.example.json`.
+To reset a domain's data, delete its `data/<name>.json` — it will be recreated from the example on next load.
+
+Reads/writes go through `app/api/data/route.ts`. Stores call `lib/saveHelper.ts` which posts the changed section back to that route. **Never write to these files directly** (see Data Privacy Rules).
