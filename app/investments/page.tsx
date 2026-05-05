@@ -748,14 +748,14 @@ export default function InvestmentsPage() {
                                   <button
                                     onClick={() => setAnalysisInv(inv)}
                                     className="hover:text-indigo-300 transition-colors text-left"
-                                    title="View details"
+                                    title="View live analysis + AI research"
                                   >
                                     {inv.asset_name}
                                   </button>
                                   <button
                                     onClick={() => setResearchInv(inv)}
                                     className="group"
-                                    title="View research notes"
+                                    title="View hand-written research notes"
                                   >
                                     <Info className={`h-3.5 w-3.5 flex-shrink-0 ${inv.research ? 'text-indigo-500 group-hover:text-indigo-300' : 'text-slate-600 group-hover:text-slate-400'}`} />
                                   </button>

@@ -11,6 +11,7 @@ import { formatCurrency, formatPercent, getPnlPercent } from '@/lib/utils';
 import type { Investment } from '@/lib/types';
 import type { StockFundamentals } from '@/app/api/stock-analysis/route';
 import type { PricePoint, HistoryRange } from '@/app/api/price-history/route';
+import AIResearchSection from '@/components/AIResearchSection';
 
 interface ResearchSection { title: string; lines: string[]; }
 
@@ -452,7 +453,7 @@ export default function StockAnalysisDrawer({ investment, onClose }: Props) {
             </div>
           )}
 
-          {/* Research notes (parsed sections) */}
+          {/* Hand-written research notes (parsed sections) */}
           {(() => {
             const sections = parseResearch(inv.research ?? '');
             if (sections.length === 0) return null;
@@ -483,6 +484,28 @@ export default function StockAnalysisDrawer({ investment, onClose }: Props) {
               </div>
             );
           })()}
+
+          {/* AI research + news (Phase 2). Internally suppresses AI research note
+              when inv.research exists, so hand-written notes win and AI shows news only. */}
+          <AIResearchSection
+            investment={inv}
+            fundamentals={data ? {
+              currentPrice:     data.currentPrice,
+              marketCap:        data.marketCap,
+              peRatio:          data.peRatio,
+              eps:              data.eps,
+              bookValue:        data.bookValue,
+              fiftyTwoWeekHigh: data.fiftyTwoWeekHigh,
+              fiftyTwoWeekLow:  data.fiftyTwoWeekLow,
+              dividendYield:    data.dividendYield,
+              beta:             data.beta,
+              profitMargin:     data.profitMargin,
+              returnOnEquity:   data.returnOnEquity,
+              revenueGrowthYOY: data.revenueGrowthYOY,
+              targetMeanPrice:  data.targetMeanPrice,
+            } : undefined}
+          />
+
         </div>
 
         {/* ── Footer ─────────────────────────────────────────────────────── */}

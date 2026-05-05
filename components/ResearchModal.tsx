@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ChevronRight, TrendingUp, AlertTriangle, BarChart2, Users, ShieldCheck, Briefcase, DollarSign, Target, BookOpen, Info } from 'lucide-react';
+import { ChevronRight, TrendingUp, AlertTriangle, BarChart2, Users, ShieldCheck, Briefcase, DollarSign, Target, BookOpen, Info, Gavel } from 'lucide-react';
 import type { Investment } from '@/lib/types';
 
 interface Props {
@@ -28,6 +28,7 @@ const SECTION_META: Record<string, { color: string; bg: string; icon: React.Reac
   'Analyst Coverage & Targets':  { color: 'text-purple-300',  bg: 'bg-purple-900/20 border-purple-800/40',  icon: <Target className="h-4 w-4" /> },
   'Risks':                       { color: 'text-red-300',     bg: 'bg-red-900/20 border-red-800/40',         icon: <AlertTriangle className="h-4 w-4" /> },
   'Financial Snapshot':          { color: 'text-emerald-300', bg: 'bg-emerald-900/20 border-emerald-800/40', icon: <BarChart2 className="h-4 w-4" /> },
+  'Final Verdict':               { color: 'text-fuchsia-300', bg: 'bg-fuchsia-900/20 border-fuchsia-800/40', icon: <Gavel className="h-4 w-4" /> },
 };
 
 const DEFAULT_META = { color: 'text-slate-300', bg: 'bg-slate-800/30 border-slate-700/40', icon: <Info className="h-4 w-4" /> };
