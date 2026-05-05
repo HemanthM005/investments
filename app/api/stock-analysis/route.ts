@@ -59,29 +59,94 @@ function str(obj: unknown): string | null {
   return null;
 }
 
+// ── Yahoo crumb / cookie auth ────────────────────────────────────────────────
+// Yahoo started requiring a crumb cookie for quoteSummary in 2024. Cache for 24h.
+const CRUMB_TTL = 24 * 60 * 60 * 1000;
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+let crumbCache: { crumb: string; cookie: string; fetchedAt: number } | null = null;
+
+async function getYahooCrumb(): Promise<{ crumb: string; cookie: string } | null> {
+  if (crumbCache && Date.now() - crumbCache.fetchedAt < CRUMB_TTL) {
+    return { crumb: crumbCache.crumb, cookie: crumbCache.cookie };
+  }
+  try {
+    // Step 1: hit fc.yahoo.com to get an A1/A3 cookie
+    const cookieRes = await fetch('https://fc.yahoo.com', {
+      headers: { 'User-Agent': UA, Accept: '*/*' },
+      redirect: 'manual',
+      cache: 'no-store',
+    });
+    const setCookie = cookieRes.headers.get('set-cookie') ?? '';
+    // Combine cookies (set-cookie can be multiple, joined by comma in undici)
+    const cookie = setCookie
+      .split(/,(?=\s*[A-Za-z0-9_-]+=)/)
+      .map((c) => c.split(';')[0].trim())
+      .filter(Boolean)
+      .join('; ');
+    if (!cookie) return null;
+
+    // Step 2: ask for a crumb using that cookie
+    const crumbRes = await fetch('https://query2.finance.yahoo.com/v1/test/getcrumb', {
+      headers: { 'User-Agent': UA, Cookie: cookie, Accept: 'text/plain' },
+      cache: 'no-store',
+    });
+    if (!crumbRes.ok) return null;
+    const crumb = (await crumbRes.text()).trim();
+    if (!crumb || crumb.includes('<') || crumb.length > 64) return null;
+
+    crumbCache = { crumb, cookie, fetchedAt: Date.now() };
+    return { crumb, cookie };
+  } catch {
+    return null;
+  }
+}
+
 // ── 1. Yahoo Finance quoteSummary (primary — no key needed) ──────────────────
 async function fetchYahoo(ticker: string): Promise<Partial<StockFundamentals>> {
-  const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=price,summaryDetail,defaultKeyStatistics,financialData`;
+  const auth = await getYahooCrumb();
+  const modules = 'price,summaryDetail,defaultKeyStatistics,financialData';
+  const baseUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${modules}`;
+  const url = auth ? `${baseUrl}&crumb=${encodeURIComponent(auth.crumb)}` : baseUrl;
   const res = await fetch(url, {
-    headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' },
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': UA,
+      ...(auth ? { Cookie: auth.cookie } : {}),
+    },
     cache: 'no-store',
   });
+  if (res.status === 401 || res.status === 403) {
+    // Invalidate crumb and retry once
+    crumbCache = null;
+    const retryAuth = await getYahooCrumb();
+    if (retryAuth) {
+      const retryRes = await fetch(`${baseUrl}&crumb=${encodeURIComponent(retryAuth.crumb)}`, {
+        headers: { Accept: 'application/json', 'User-Agent': UA, Cookie: retryAuth.cookie },
+        cache: 'no-store',
+      });
+      if (retryRes.ok) return parseYahooResponse(await retryRes.json());
+    }
+    throw new Error(`Yahoo Finance ${res.status}`);
+  }
   if (!res.ok) throw new Error(`Yahoo Finance ${res.status}`);
+  return parseYahooResponse(await res.json());
+}
 
-  const json = await res.json() as {
-    quoteSummary: {
-      result: Array<{
-        price: Record<string, unknown>;
-        summaryDetail: Record<string, unknown>;
-        defaultKeyStatistics: Record<string, unknown>;
-        financialData: Record<string, unknown>;
+function parseYahooResponse(json: unknown): Partial<StockFundamentals> {
+  const j = json as {
+    quoteSummary?: {
+      result?: Array<{
+        price?: Record<string, unknown>;
+        summaryDetail?: Record<string, unknown>;
+        defaultKeyStatistics?: Record<string, unknown>;
+        financialData?: Record<string, unknown>;
       }> | null;
-      error: unknown;
+      error?: unknown;
     };
   };
 
-  if (json.quoteSummary?.error) throw new Error(String(json.quoteSummary.error));
-  const r = json.quoteSummary?.result?.[0];
+  if (j.quoteSummary?.error) throw new Error(String(j.quoteSummary.error));
+  const r = j.quoteSummary?.result?.[0];
   if (!r) throw new Error('No data from Yahoo Finance');
 
   const p  = r.price                 ?? {};
@@ -164,14 +229,20 @@ export async function GET(req: Request) {
   }
 
   try {
-    // Run Yahoo + Alpha Vantage in parallel; Alpha Vantage failure is non-fatal
+    // Run Yahoo + Alpha Vantage in parallel; either failure is non-fatal
+    let yahooErr: string | null = null;
     const [yahoo, alpha] = await Promise.all([
-      fetchYahoo(ticker),
+      fetchYahoo(ticker).catch((e) => { yahooErr = String(e); return {} as Partial<StockFundamentals>; }),
       fetchAlphaVantage(ticker).catch(() => ({})),
     ]);
 
-    const sources: string[] = ['yahoo'];
+    const sources: string[] = [];
+    if (Object.keys(yahoo).length > 0) sources.push('yahoo');
     if (Object.keys(alpha).length > 0) sources.push('alphavantage');
+
+    if (sources.length === 0) {
+      return NextResponse.json({ error: yahooErr ?? 'No fundamentals available' }, { status: 502 });
+    }
 
     // Merge: Alpha Vantage fills gaps that Yahoo left null
     const merged = { ...yahoo };
