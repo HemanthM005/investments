@@ -34,3 +34,10 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# TypeScript build artifacts (regenerated on every build)
+tsconfig.tsbuildinfo
+
+# Claude Code harness state (machine-local)
+.claude/scheduled_tasks.lock
+.claude/*.lock

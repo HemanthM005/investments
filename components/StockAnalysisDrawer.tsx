@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, GitCompare, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
+import { X, GitCompare, TrendingUp, TrendingDown, Minus, RefreshCw, ChevronRight, BookOpen, AlertTriangle } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts';
@@ -12,6 +12,25 @@ import type { Investment } from '@/lib/types';
 import type { StockFundamentals } from '@/app/api/stock-analysis/route';
 import type { PricePoint, HistoryRange } from '@/app/api/price-history/route';
 import AIResearchSection from '@/components/AIResearchSection';
+
+interface ResearchSection { title: string; lines: string[]; }
+
+function parseResearch(text: string): ResearchSection[] {
+  const sections: ResearchSection[] = [];
+  let current: ResearchSection | null = null;
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    const headingMatch = line.match(/^\*\*(.+)\*\*$/);
+    if (headingMatch) {
+      if (current) sections.push(current);
+      current = { title: headingMatch[1], lines: [] };
+    } else if (current && line) {
+      current.lines.push(line);
+    }
+  }
+  if (current) sections.push(current);
+  return sections;
+}
 
 interface Props {
   investment: Investment | null;
@@ -84,10 +103,15 @@ export default function StockAnalysisDrawer({ investment, onClose }: Props) {
   const [range, setRange]             = useState<HistoryRange>('6mo');
 
   const open = investment !== null;
+  const supportsLiveData =
+    !!investment?.ticker &&
+    (investment.asset_type === 'Stock' ||
+      investment.asset_type === 'ETF' ||
+      investment.asset_type === 'Crypto');
 
   // Fetch fundamentals when investment changes
   useEffect(() => {
-    if (!investment?.ticker) { setData(null); return; }
+    if (!supportsLiveData || !investment?.ticker) { setData(null); setErrorData(null); return; }
     setLoadingData(true);
     setErrorData(null);
     setData(null);
@@ -97,20 +121,20 @@ export default function StockAnalysisDrawer({ investment, onClose }: Props) {
         if (json.error) throw new Error(json.error);
         setData(json as StockFundamentals);
       })
-      .catch((e) => setErrorData(String(e)))
+      .catch((e) => setErrorData(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoadingData(false));
-  }, [investment]);
+  }, [investment, supportsLiveData]);
 
   // Fetch price history when investment or range changes
   useEffect(() => {
-    if (!investment?.ticker) { setHistory([]); return; }
+    if (!supportsLiveData || !investment?.ticker) { setHistory([]); return; }
     setLoadingChart(true);
     fetch(`/api/price-history?ticker=${encodeURIComponent(investment.ticker)}&range=${range}`)
       .then((r) => r.json())
       .then((json) => { if (!json.error) setHistory(json.points ?? []); })
       .catch(() => {})
       .finally(() => setLoadingChart(false));
-  }, [investment, range]);
+  }, [investment, range, supportsLiveData]);
 
   // Close on Escape
   useEffect(() => {
@@ -190,7 +214,7 @@ export default function StockAnalysisDrawer({ investment, onClose }: Props) {
         <div className="flex-1 space-y-4 p-5">
 
           {/* Price chart */}
-          {inv.ticker && (
+          {supportsLiveData && (
             <div className="rounded-lg border border-[#2a2d3e] bg-[#1a1d2e] p-4">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Price History</p>
@@ -300,18 +324,21 @@ export default function StockAnalysisDrawer({ investment, onClose }: Props) {
             </div>
           </div>
 
-          {/* Fundamentals */}
-          {!inv.ticker ? (
-            <div className="rounded-lg border border-[#2a2d3e] bg-[#1a1d2e] p-4 text-center text-sm text-slate-500">
-              Add a ticker symbol to see live fundamentals.
+          {/* Fundamentals — only for ticker-based asset types */}
+          {!supportsLiveData ? (
+            <div className="rounded-lg border border-[#2a2d3e] bg-[#1a1d2e] p-4 text-center text-xs text-slate-500">
+              {inv.ticker
+                ? `Live fundamentals aren't available for ${inv.asset_type}.`
+                : 'Add a ticker on a Stock / ETF / Crypto entry to see live fundamentals.'}
             </div>
           ) : loadingData ? (
             <div className="space-y-2">
               {[1,2,3].map((i) => <div key={i} className="h-14 rounded-lg bg-[#1a1d2e] animate-pulse" />)}
             </div>
           ) : errorData ? (
-            <div className="rounded-lg border border-red-800/40 bg-red-950/20 p-4 text-sm text-red-400">
-              {errorData}
+            <div className="rounded-lg border border-amber-800/40 bg-amber-950/20 p-4 text-xs text-amber-300/90 flex items-start gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+              <span>Couldn&apos;t load live fundamentals: {errorData}</span>
             </div>
           ) : data ? (
             <>
@@ -410,7 +437,56 @@ export default function StockAnalysisDrawer({ investment, onClose }: Props) {
             </>
           ) : null}
 
-          {/* AI research + news (Phase 2) */}
+          {/* Watchlist buy-zone hint */}
+          {inv.status === 'watchlist' && inv.buy_range && (
+            <div className="rounded-lg border border-indigo-800/40 bg-indigo-950/20 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-1">Target Buy Range</p>
+              <p className="text-sm text-slate-200">{inv.buy_range}</p>
+            </div>
+          )}
+
+          {/* Notes */}
+          {inv.notes?.trim() && (
+            <div className="rounded-lg border border-[#2a2d3e] bg-[#1a1d2e] p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Notes</p>
+              <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{inv.notes}</p>
+            </div>
+          )}
+
+          {/* Hand-written research notes (parsed sections) */}
+          {(() => {
+            const sections = parseResearch(inv.research ?? '');
+            if (sections.length === 0) return null;
+            return (
+              <div className="rounded-lg border border-[#2a2d3e] bg-[#1a1d2e] p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  Research
+                </div>
+                {sections.map((s) => (
+                  <div key={s.title}>
+                    <p className="text-xs font-semibold text-indigo-300 mb-1">{s.title}</p>
+                    <div className="space-y-1">
+                      {s.lines.map((line, i) => {
+                        if (line.startsWith('-')) {
+                          return (
+                            <div key={i} className="flex items-start gap-1.5">
+                              <ChevronRight className="h-3 w-3 mt-0.5 flex-shrink-0 text-slate-600" />
+                              <span className="text-xs leading-relaxed text-slate-300">{line.slice(1).trim()}</span>
+                            </div>
+                          );
+                        }
+                        return <p key={i} className="text-xs leading-relaxed text-slate-300">{line}</p>;
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* AI research + news (Phase 2). Internally suppresses AI research note
+              when inv.research exists, so hand-written notes win and AI shows news only. */}
           <AIResearchSection
             investment={inv}
             fundamentals={data ? {
@@ -429,11 +505,12 @@ export default function StockAnalysisDrawer({ investment, onClose }: Props) {
               targetMeanPrice:  data.targetMeanPrice,
             } : undefined}
           />
+
         </div>
 
         {/* ── Footer ─────────────────────────────────────────────────────── */}
         <div className="sticky bottom-0 border-t border-[#2a2d3e] bg-[#12151f] p-4 flex gap-2">
-          {inv.ticker && (
+          {supportsLiveData && (
             <Button
               className="flex-1 gap-2"
               onClick={() => { router.push(`/compare?tickers=${inv.ticker}`); onClose(); }}

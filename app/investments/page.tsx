@@ -565,13 +565,9 @@ export default function InvestmentsPage() {
                         <TableCell className="font-medium text-slate-100 whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             <button
-                              onClick={() => {
-                                const canAnalyze = inv.ticker && (inv.asset_type === 'Stock' || inv.asset_type === 'ETF' || inv.asset_type === 'Crypto');
-                                if (canAnalyze) setAnalysisInv(inv);
-                                else setResearchInv(inv);
-                              }}
+                              onClick={() => setAnalysisInv(inv)}
                               className="hover:text-indigo-300 transition-colors text-left"
-                              title={inv.ticker ? 'View live analysis' : 'View research notes'}
+                              title="View details"
                             >
                               {inv.asset_name}
                             </button>
@@ -750,13 +746,9 @@ export default function InvestmentsPage() {
                               <TableCell className="font-medium text-slate-100 whitespace-nowrap">
                                 <div className="flex items-center gap-1.5">
                                   <button
-                                    onClick={() => {
-                                      const canAnalyze = inv.ticker && (inv.asset_type === 'Stock' || inv.asset_type === 'ETF' || inv.asset_type === 'Crypto');
-                                      if (canAnalyze) setAnalysisInv(inv);
-                                      else setResearchInv(inv);
-                                    }}
+                                    onClick={() => setAnalysisInv(inv)}
                                     className="hover:text-indigo-300 transition-colors text-left"
-                                    title={inv.ticker ? 'View live analysis + AI research' : 'View research notes'}
+                                    title="View live analysis + AI research"
                                   >
                                     {inv.asset_name}
                                   </button>
