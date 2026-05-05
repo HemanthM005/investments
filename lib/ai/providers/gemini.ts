@@ -96,8 +96,8 @@ export class GeminiProvider implements AIProvider {
     if (!text || text.length < 100) {
       throw new Error('Gemini returned an empty or too-short research note');
     }
-    if (!text.includes('**Executive Summary**')) {
-      throw new Error('Gemini response did not follow the required Paras format');
+    if (!text.includes('**Executive Summary**') || !text.includes('**Final Verdict**')) {
+      throw new Error('Gemini response did not follow the required format (missing Executive Summary or Final Verdict)');
     }
 
     const tokens = extractTokens(response);

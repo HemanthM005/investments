@@ -19,6 +19,7 @@ const REQUIRED_SECTIONS = [
   'Analyst Coverage & Targets',
   'Risks',
   'Financial Snapshot',
+  'Final Verdict',
 ] as const;
 
 function fmtFundamentals(f: ResearchInput['fundamentals']): string {
@@ -65,6 +66,14 @@ CONTENT RULES:
 - Recent Financials: most recent 2-3 quarterly results with revenue, profit, margin trends.
 - Risks: at least 3 substantive risks; do not include generic "market risk" filler.
 - Financial Snapshot: 4-6 key metric bullets in "Label: Value" form (e.g. "- P/E: 32.5", "- Market cap: ₹50,000 Cr").
+- Final Verdict: this is the actionable bottom-line section. Include EXACTLY these 6 bullets in this order:
+    - "Valuation: <Overvalued | Fairly valued | Undervalued> — <one-sentence reasoning citing P/E, P/B, growth, peer comparison>"
+    - "Suggested entry zone: <price range, e.g. ₹3,200-3,500> — <one-sentence reasoning>"
+    - "Short-term outlook (6-12 months): <Bullish | Neutral | Bearish> — <one-sentence reasoning citing near-term catalysts or headwinds>"
+    - "Long-term outlook (3-5 years): <Bullish | Neutral | Bearish> — <one-sentence reasoning citing structural drivers>"
+    - "Action: <Strong Buy | Buy | Hold | Wait for dip | Avoid> — <one-sentence justification>"
+    - "Confidence: <High | Medium | Low> — <one-sentence justification based on data quality and how unanimous the signals are>"
+  Be decisive — do not hedge with "depends on your goals" or "consult an advisor". The investor knows it's not advice.
 - Do not include disclaimers, summaries about yourself, or wrapping prose. Output the markdown note only.`;
 
   const user = `Generate the research note for:

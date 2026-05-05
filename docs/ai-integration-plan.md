@@ -126,18 +126,19 @@ export interface AIProvider {
 
 ## Phase 2 — Drawer integration
 
-- [ ] Create `components/AIResearchSection.tsx`
-  - [ ] Accepts `Investment`; fetches from `/api/ai-research` on mount when no `inv.research`
-  - [ ] Loading skeleton state
-  - [ ] Error state (rate-limited / API down / invalid JSON)
-  - [ ] "Generated X ago — Refresh" header with relative timestamp
-  - [ ] Citation chips inline (clickable, open in new tab)
-  - [ ] Bottom disclaimer: "AI-generated, verify before trading"
-- [ ] Hook into `components/StockAnalysisDrawer.tsx`
-  - [ ] Show AI section only when `inv.research` is empty (your hand-written notes win)
-  - [ ] Optional: separate "Recent News" subsection rendered as compact bullet list
-  - [ ] Refresh button calls `POST /api/ai-research` with `force: true`
-- [ ] Verify the AI Paras-format output renders identically to a hand-written note (visual parity check)
+- [x] Create `components/AIResearchSection.tsx`
+  - [x] Accepts `Investment`; fetches from `/api/ai-research` on mount when no `inv.research`
+  - [x] Loading skeleton state
+  - [x] Error state (rate-limited / API down / invalid JSON) — soft amber banner
+  - [x] "Updated X ago — Refresh" header with relative timestamp
+  - [x] Citation chips inline (clickable, open in new tab) + per-bullet `(source: <url>)` linkified
+  - [x] Bottom disclaimer: "AI-generated · Verify before making any investment decision"
+- [x] Hook into `components/StockAnalysisDrawer.tsx`
+  - [x] Show AI research note only when `inv.research` is empty (hand-written notes win)
+  - [x] News subsection always shown when AI is supported for the asset type
+  - [x] Refresh button calls `POST /api/ai-research` with `force: true` + 5s UI debounce
+  - [x] Yahoo fundamentals from drawer state passed through to AI prompt as ground truth
+- [ ] Visual parity check — run in browser, click into a stock, confirm Paras sections render identically
 
 ---
 

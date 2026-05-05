@@ -11,6 +11,7 @@ import { formatCurrency, formatPercent, getPnlPercent } from '@/lib/utils';
 import type { Investment } from '@/lib/types';
 import type { StockFundamentals } from '@/app/api/stock-analysis/route';
 import type { PricePoint, HistoryRange } from '@/app/api/price-history/route';
+import AIResearchSection from '@/components/AIResearchSection';
 
 interface Props {
   investment: Investment | null;
@@ -408,6 +409,26 @@ export default function StockAnalysisDrawer({ investment, onClose }: Props) {
               </div>
             </>
           ) : null}
+
+          {/* AI research + news (Phase 2) */}
+          <AIResearchSection
+            investment={inv}
+            fundamentals={data ? {
+              currentPrice:     data.currentPrice,
+              marketCap:        data.marketCap,
+              peRatio:          data.peRatio,
+              eps:              data.eps,
+              bookValue:        data.bookValue,
+              fiftyTwoWeekHigh: data.fiftyTwoWeekHigh,
+              fiftyTwoWeekLow:  data.fiftyTwoWeekLow,
+              dividendYield:    data.dividendYield,
+              beta:             data.beta,
+              profitMargin:     data.profitMargin,
+              returnOnEquity:   data.returnOnEquity,
+              revenueGrowthYOY: data.revenueGrowthYOY,
+              targetMeanPrice:  data.targetMeanPrice,
+            } : undefined}
+          />
         </div>
 
         {/* ── Footer ─────────────────────────────────────────────────────── */}

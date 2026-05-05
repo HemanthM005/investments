@@ -750,11 +750,21 @@ export default function InvestmentsPage() {
                               <TableCell className="font-medium text-slate-100 whitespace-nowrap">
                                 <div className="flex items-center gap-1.5">
                                   <button
-                                    onClick={() => setResearchInv(inv)}
-                                    className="flex items-center gap-1.5 hover:text-indigo-300 transition-colors group"
-                                    title="View research"
+                                    onClick={() => {
+                                      const canAnalyze = inv.ticker && (inv.asset_type === 'Stock' || inv.asset_type === 'ETF' || inv.asset_type === 'Crypto');
+                                      if (canAnalyze) setAnalysisInv(inv);
+                                      else setResearchInv(inv);
+                                    }}
+                                    className="hover:text-indigo-300 transition-colors text-left"
+                                    title={inv.ticker ? 'View live analysis + AI research' : 'View research notes'}
                                   >
                                     {inv.asset_name}
+                                  </button>
+                                  <button
+                                    onClick={() => setResearchInv(inv)}
+                                    className="group"
+                                    title="View hand-written research notes"
+                                  >
                                     <Info className={`h-3.5 w-3.5 flex-shrink-0 ${inv.research ? 'text-indigo-500 group-hover:text-indigo-300' : 'text-slate-600 group-hover:text-slate-400'}`} />
                                   </button>
                                   {isNew && (
