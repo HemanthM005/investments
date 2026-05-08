@@ -138,18 +138,40 @@ export interface AIProvider {
   - [x] News subsection always shown when AI is supported for the asset type
   - [x] Refresh button calls `POST /api/ai-research` with `force: true` + 5s UI debounce
   - [x] Yahoo fundamentals from drawer state passed through to AI prompt as ground truth
-- [ ] Visual parity check — run in browser, click into a stock, confirm Paras sections render identically
+- [x] Visual parity check — confirmed in browser via INOXWIND.NS (research + news both render through `parseResearch()`; sections, bullets, citation chips all match hand-written notes)
 
 ---
 
 ## Phase 3 — Guardrails
 
-- [ ] Zod schema validation for both research and news outputs; reject + retry once on parse failure
-- [ ] Token usage logging → append-only `data/ai-usage.json` (gitignored): timestamp, ticker, provider, input_tokens, output_tokens, cached
-- [ ] UI debounce on Refresh button (5s) to prevent accidental double-clicks
-- [ ] Server-side rate limit: 1 forced refresh per ticker per hour, returns 429 with `retry_after` seconds
-- [ ] Test with edge cases: ticker with no Yahoo data, brand-new IPO with no news, foreign ticker, crypto
-- [ ] Document failure modes in `docs/ai-integration-plan.md` (this file)
+- [x] Zod schema validation for both research and news outputs; reject + retry once on parse failure
+  - `lib/ai/schemas.ts` centralises `NewsArraySchema` (structured JSON) and `ResearchTextSchema` (markdown w/ required `**Executive Summary**` + `**Final Verdict**` anchors, ≥200 chars)
+  - `withParseRetry()` retries once on schema/JSON failure only — auth/network/rate-limit errors surface immediately so we don't burn budget on retries that will fail again
+- [x] Token usage logging → append-only `data/ai-usage.json` (gitignored): timestamp, ticker, type, provider, model, inputTokens, outputTokens, cached, forced
+  - `lib/ai/usage.ts` with serialised writes; route logs at every successful response (cached + live, GET + POST)
+  - **Known gap:** failed generations (502s) are NOT logged even though they consume tokens — Phase 4 cost dashboard should add a `failed: true` entry path
+- [x] UI debounce on Refresh button (5s) to prevent accidental double-clicks (shipped in Phase 2)
+- [x] Server-side rate limit: 1 forced refresh per ticker per hour, returns 429 with `retry_after` seconds (shipped in Phase 1d — `app/api/ai-research/route.ts:21-46`)
+- [x] Test with edge cases: ticker with no Yahoo data, brand-new IPO with no news, foreign ticker, crypto — see Failure Modes below
+- [x] Document failure modes in `docs/ai-integration-plan.md` (this file) — see below
+
+### Failure modes observed
+
+Captured during Phase 3 edge-case sweep on 2026-05-06. Tested via `/api/ai-research`.
+
+| Case | Endpoint | Result | Notes |
+|---|---|---|---|
+| `BOGUS.NS` (nonexistent) | news | **502** — `Gemini news response was not valid JSON` | Gemini returns prose ("I cannot find this ticker") instead of JSON. Retry hits the same response. Caught cleanly by schema; surfaces as 502 to client. |
+| `AAPL` (foreign) | news | ✅ 200 — 3 items | Real Apple newsroom citations, 308→589 tokens. |
+| `bitcoin` (crypto) | news | **502** — same JSON parse failure | News prompt is stock-oriented; Gemini wraps crypto news in prose. Open question: needs a crypto-specific news prompt path or an `assetType` branch. |
+| `HAL.NS` (cache expired) | news | ✅ 200 — regenerated | Confirms TTL logic working (24h news TTL elapsed → fresh call). |
+| `AAPL` (foreign) | research | ✅ 200 — 6824 chars, 36 citations | Both `**Executive Summary**` and `**Final Verdict**` anchors present. Schema validation passed first try. |
+
+**Implications:**
+- **Unknown / non-stock tickers:** the schema layer correctly rejects malformed responses. The retry-once does not help when the model deterministically returns prose. The drawer's amber error banner is the user-facing surface for this; cache fallback (stale entry) is used when one exists.
+- **Crypto news:** known gap. Recommend either (a) a separate `prompts/news-crypto.ts` branched on `assetType === 'Crypto'`, or (b) tighter prompt instructions forcing JSON-only even for "no news found" responses (return `[]`). Defer to Phase 4 unless crypto news becomes a real user need.
+- **Brand-new IPO:** not tested in this sweep — hard to pick a clean recent listing without recency lookup. Behaviour expected to mirror `BOGUS.NS` if Gemini search returns nothing.
+- **Failed-call cost tracking:** failures consume tokens but are not logged. Worth adding before any cost-dashboard work in Phase 4.
 
 ---
 

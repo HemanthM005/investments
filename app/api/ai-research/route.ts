@@ -9,9 +9,24 @@ import {
   setCachedNews,
   setCachedResearch,
 } from '@/lib/ai';
+import { logUsage } from '@/lib/ai/usage';
 import type { ResearchInput } from '@/lib/ai/types';
 
 type Section = 'research' | 'news';
+
+function recordUsage(args: {
+  ticker: string;
+  type: Section;
+  provider: string;
+  model: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  cached: boolean;
+  forced: boolean;
+}): void {
+  // Fire-and-forget; logger swallows its own errors.
+  void logUsage({ timestamp: Date.now(), ...args });
+}
 
 // Per-ticker rate limit: at most N forced refreshes per hour.
 const tickerLastForce = new Map<string, number>();
@@ -74,6 +89,7 @@ export async function GET(req: Request) {
   if (type === 'research') {
     const cached = await getCachedResearch(ticker);
     if (cached && isResearchFresh(cached)) {
+      recordUsage({ ticker, type, provider: cached.provider, model: cached.model, cached: true, forced: false });
       return NextResponse.json({ ...cached, cached: true });
     }
     try {
@@ -81,6 +97,7 @@ export async function GET(req: Request) {
       const fundamentals = parseFundamentalsParam(searchParams.get('fundamentals'));
       const result = await provider.generateResearch({ ticker, assetName, sector, assetType, fundamentals });
       await setCachedResearch(ticker, result);
+      recordUsage({ ticker, type, provider: result.provider, model: result.model, inputTokens: result.tokensIn, outputTokens: result.tokensOut, cached: false, forced: false });
       return NextResponse.json({ ...result, cached: false });
     } catch (err) {
       if (cached) return NextResponse.json({ ...cached, cached: true, stale: true, refreshError: String(err) });
@@ -89,12 +106,14 @@ export async function GET(req: Request) {
   } else {
     const cached = await getCachedNews(ticker);
     if (cached && isNewsFresh(cached)) {
+      recordUsage({ ticker, type, provider: cached.provider, model: cached.model, cached: true, forced: false });
       return NextResponse.json({ ...cached, cached: true });
     }
     try {
       const provider = getProvider();
       const result = await provider.generateNews({ ticker, assetName });
       await setCachedNews(ticker, result);
+      recordUsage({ ticker, type, provider: result.provider, model: result.model, inputTokens: result.tokensIn, outputTokens: result.tokensOut, cached: false, forced: false });
       return NextResponse.json({ ...result, cached: false });
     } catch (err) {
       if (cached) return NextResponse.json({ ...cached, cached: true, stale: true, refreshError: String(err) });
@@ -138,7 +157,10 @@ export async function POST(req: Request) {
     if (type === 'research') {
       if (!force) {
         const cached = await getCachedResearch(ticker);
-        if (cached && isResearchFresh(cached)) return NextResponse.json({ ...cached, cached: true });
+        if (cached && isResearchFresh(cached)) {
+          recordUsage({ ticker, type, provider: cached.provider, model: cached.model, cached: true, forced: false });
+          return NextResponse.json({ ...cached, cached: true });
+        }
       }
       const result = await provider.generateResearch({
         ticker,
@@ -149,11 +171,15 @@ export async function POST(req: Request) {
       });
       await setCachedResearch(ticker, result);
       if (force) recordForceRefresh(ticker);
+      recordUsage({ ticker, type, provider: result.provider, model: result.model, inputTokens: result.tokensIn, outputTokens: result.tokensOut, cached: false, forced: force });
       return NextResponse.json({ ...result, cached: false });
     } else {
       if (!force) {
         const cached = await getCachedNews(ticker);
-        if (cached && isNewsFresh(cached)) return NextResponse.json({ ...cached, cached: true });
+        if (cached && isNewsFresh(cached)) {
+          recordUsage({ ticker, type, provider: cached.provider, model: cached.model, cached: true, forced: false });
+          return NextResponse.json({ ...cached, cached: true });
+        }
       }
       const result = await provider.generateNews({
         ticker,
@@ -161,6 +187,7 @@ export async function POST(req: Request) {
       });
       await setCachedNews(ticker, result);
       if (force) recordForceRefresh(ticker);
+      recordUsage({ ticker, type, provider: result.provider, model: result.model, inputTokens: result.tokensIn, outputTokens: result.tokensOut, cached: false, forced: force });
       return NextResponse.json({ ...result, cached: false });
     }
   } catch (err) {

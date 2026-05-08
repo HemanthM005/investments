@@ -1,8 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
-import { z } from 'zod';
 import { aiConfig } from '../config';
 import { buildResearchPrompt } from '../prompts/research';
 import { buildNewsPrompt } from '../prompts/news';
+import { NewsArraySchema, ResearchTextSchema, withParseRetry } from '../schemas';
 import type {
   AIProvider,
   Citation,
@@ -12,14 +12,6 @@ import type {
   ResearchInput,
   ResearchOutput,
 } from '../types';
-
-const NewsItemSchema = z.object({
-  headline: z.string().min(1),
-  summary:  z.string().min(1),
-  date:     z.string().nullable().optional(),
-  url:      z.string().url().optional(),
-});
-const NewsArraySchema = z.array(NewsItemSchema);
 
 function getClient(): GoogleGenAI {
   const apiKey = process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY;
@@ -79,82 +71,83 @@ export class GeminiProvider implements AIProvider {
   readonly model = aiConfig.models.gemini.name;
 
   async generateResearch(input: ResearchInput): Promise<ResearchOutput> {
-    const ai = getClient();
-    const { system, user } = buildResearchPrompt(input);
+    return withParseRetry(`research[${input.ticker}]`, async () => {
+      const ai = getClient();
+      const { system, user } = buildResearchPrompt(input);
 
-    const response = await ai.models.generateContent({
-      model: this.model,
-      contents: [{ role: 'user', parts: [{ text: user }] }],
-      config: {
-        systemInstruction: system,
-        tools: aiConfig.models.gemini.searchEnabled ? [{ googleSearch: {} }] : undefined,
-        temperature: 0.3,
-      },
+      const response = await ai.models.generateContent({
+        model: this.model,
+        contents: [{ role: 'user', parts: [{ text: user }] }],
+        config: {
+          systemInstruction: system,
+          tools: aiConfig.models.gemini.searchEnabled ? [{ googleSearch: {} }] : undefined,
+          temperature: 0.3,
+        },
+      });
+
+      const text = extractText(response);
+      const validated = ResearchTextSchema.safeParse(text);
+      if (!validated.success) {
+        throw new Error(`Gemini research response failed schema validation: ${validated.error.issues[0]?.message ?? 'unknown'}`);
+      }
+
+      const tokens = extractTokens(response);
+      return {
+        research:    validated.data,
+        citations:   extractCitations(response),
+        generatedAt: Date.now(),
+        provider:    this.name,
+        model:       this.model,
+        tokensIn:    tokens.input,
+        tokensOut:   tokens.output,
+      };
     });
-
-    const text = extractText(response);
-    if (!text || text.length < 100) {
-      throw new Error('Gemini returned an empty or too-short research note');
-    }
-    if (!text.includes('**Executive Summary**') || !text.includes('**Final Verdict**')) {
-      throw new Error('Gemini response did not follow the required format (missing Executive Summary or Final Verdict)');
-    }
-
-    const tokens = extractTokens(response);
-    return {
-      research:    text,
-      citations:   extractCitations(response),
-      generatedAt: Date.now(),
-      provider:    this.name,
-      model:       this.model,
-      tokensIn:    tokens.input,
-      tokensOut:   tokens.output,
-    };
   }
 
   async generateNews(input: NewsInput): Promise<NewsOutput> {
-    const ai = getClient();
-    const { system, user } = buildNewsPrompt(input);
+    return withParseRetry(`news[${input.ticker}]`, async () => {
+      const ai = getClient();
+      const { system, user } = buildNewsPrompt(input);
 
-    const response = await ai.models.generateContent({
-      model: this.model,
-      contents: [{ role: 'user', parts: [{ text: user }] }],
-      config: {
-        systemInstruction: system,
-        tools: aiConfig.models.gemini.searchEnabled ? [{ googleSearch: {} }] : undefined,
-        temperature: 0.2,
-      },
+      const response = await ai.models.generateContent({
+        model: this.model,
+        contents: [{ role: 'user', parts: [{ text: user }] }],
+        config: {
+          systemInstruction: system,
+          tools: aiConfig.models.gemini.searchEnabled ? [{ googleSearch: {} }] : undefined,
+          temperature: 0.2,
+        },
+      });
+
+      const text = stripCodeFences(extractText(response));
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        throw new Error('Gemini news response was not valid JSON');
+      }
+
+      const validated = NewsArraySchema.safeParse(parsed);
+      if (!validated.success) {
+        throw new Error(`Gemini news response failed schema validation: ${validated.error.message}`);
+      }
+
+      const items: NewsItem[] = validated.data.map((it) => ({
+        headline: it.headline,
+        summary:  it.summary,
+        date:     it.date ?? undefined,
+        citation: it.url ? { url: it.url } : undefined,
+      }));
+
+      const tokens = extractTokens(response);
+      return {
+        items,
+        generatedAt: Date.now(),
+        provider:    this.name,
+        model:       this.model,
+        tokensIn:    tokens.input,
+        tokensOut:   tokens.output,
+      };
     });
-
-    const text = stripCodeFences(extractText(response));
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      throw new Error('Gemini news response was not valid JSON');
-    }
-
-    const validated = NewsArraySchema.safeParse(parsed);
-    if (!validated.success) {
-      throw new Error(`Gemini news response failed schema validation: ${validated.error.message}`);
-    }
-
-    // Map url → citation per item; merge into a single citation set in cache shape.
-    const items: NewsItem[] = validated.data.map((it) => ({
-      headline: it.headline,
-      summary:  it.summary,
-      date:     it.date ?? undefined,
-      citation: it.url ? { url: it.url } : undefined,
-    }));
-
-    const tokens = extractTokens(response);
-    return {
-      items,
-      generatedAt: Date.now(),
-      provider:    this.name,
-      model:       this.model,
-      tokensIn:    tokens.input,
-      tokensOut:   tokens.output,
-    };
   }
 }
