@@ -87,12 +87,12 @@ export default function AIResearchSection({ investment, fundamentals }: Props) {
     if (!supportsAI) return;
     setNews({ kind: 'loading' });
     try {
-      const url = `/api/ai-research?ticker=${encodeURIComponent(ticker!)}&type=news&assetName=${encodeURIComponent(investment.asset_name)}`;
+      const url = `/api/ai-research?ticker=${encodeURIComponent(ticker!)}&type=news&assetName=${encodeURIComponent(investment.asset_name)}&assetType=${encodeURIComponent(investment.asset_type)}`;
       const res = force
         ? await fetch('/api/ai-research', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ticker, type: 'news', assetName: investment.asset_name, force: true }),
+            body: JSON.stringify({ ticker, type: 'news', assetName: investment.asset_name, assetType: investment.asset_type, force: true }),
           })
         : await fetch(url);
       const json = await res.json();

@@ -175,12 +175,18 @@ Captured during Phase 3 edge-case sweep on 2026-05-06. Tested via `/api/ai-resea
 
 ---
 
-## Phase 4 — Polish (optional, do later)
+## Phase 4a — Observability + carry-overs (shipped)
 
-- [ ] Cost dashboard route (`/ai-usage`) reading `data/ai-usage.json` — shows per-day token spend
+- [x] Log failed AI calls to `data/ai-usage.json` (`failed: true`, truncated `error` string) — closes the Phase 3 known gap that made cost data dishonest
+- [x] Fix crypto news pipeline — `NewsInput.assetType` threaded from drawer → route → prompt; `news.ts` now branches language for `Crypto` (talks about protocol/project news, lists CoinDesk/The Block as sources) and adds an explicit empty-array rule so unknown/non-stock tickers return `[]` instead of prose
+- [x] Cost dashboard `/ai-usage` reading `data/ai-usage.json` — KPIs (total calls, input/output tokens, cache hit rate), per-day table, per-ticker table, recent failures table; linked from Navbar
+
+## Phase 4b — Future polish (no plans yet)
+
 - [ ] Watchlist news alert: highlight watchlist row when fresh news lands
 - [ ] Compare page: AI head-to-head paragraph for two selected tickers
-- [ ] Nightly batch refresh (cron) for top-N tracked tickers — only if free-tier limits allow
+
+> Nightly batch refresh dropped — pre-warming caches the user may never look at burns budget for no UX win.
 
 ---
 
