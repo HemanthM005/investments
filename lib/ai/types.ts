@@ -28,6 +28,9 @@ export interface ResearchInput {
 export interface NewsInput {
   ticker: string;
   assetName: string;
+  // Drives prompt language: stocks talk about "company news"; crypto talks
+  // about "protocol/project news". Default 'Stock' if unspecified.
+  assetType?: string;
   // Look-back window. Default 30 days.
   lookbackDays?: number;
 }

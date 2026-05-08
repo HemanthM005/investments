@@ -23,9 +23,16 @@ function recordUsage(args: {
   outputTokens?: number;
   cached: boolean;
   forced: boolean;
+  failed?: boolean;
+  error?: string;
 }): void {
   // Fire-and-forget; logger swallows its own errors.
   void logUsage({ timestamp: Date.now(), ...args });
+}
+
+function shortError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.length > 200 ? msg.slice(0, 200) + '…' : msg;
 }
 
 // Per-ticker rate limit: at most N forced refreshes per hour.
@@ -100,6 +107,7 @@ export async function GET(req: Request) {
       recordUsage({ ticker, type, provider: result.provider, model: result.model, inputTokens: result.tokensIn, outputTokens: result.tokensOut, cached: false, forced: false });
       return NextResponse.json({ ...result, cached: false });
     } catch (err) {
+      recordUsage({ ticker, type, provider: aiConfig.provider, model: aiConfig.models[aiConfig.provider]?.name ?? 'unknown', cached: false, forced: false, failed: true, error: shortError(err) });
       if (cached) return NextResponse.json({ ...cached, cached: true, stale: true, refreshError: String(err) });
       return NextResponse.json({ error: String(err) }, { status: 502 });
     }
@@ -111,11 +119,12 @@ export async function GET(req: Request) {
     }
     try {
       const provider = getProvider();
-      const result = await provider.generateNews({ ticker, assetName });
+      const result = await provider.generateNews({ ticker, assetName, assetType });
       await setCachedNews(ticker, result);
       recordUsage({ ticker, type, provider: result.provider, model: result.model, inputTokens: result.tokensIn, outputTokens: result.tokensOut, cached: false, forced: false });
       return NextResponse.json({ ...result, cached: false });
     } catch (err) {
+      recordUsage({ ticker, type, provider: aiConfig.provider, model: aiConfig.models[aiConfig.provider]?.name ?? 'unknown', cached: false, forced: false, failed: true, error: shortError(err) });
       if (cached) return NextResponse.json({ ...cached, cached: true, stale: true, refreshError: String(err) });
       return NextResponse.json({ error: String(err) }, { status: 502 });
     }
@@ -184,6 +193,7 @@ export async function POST(req: Request) {
       const result = await provider.generateNews({
         ticker,
         assetName: body.assetName ?? ticker,
+        assetType: body.assetType,
       });
       await setCachedNews(ticker, result);
       if (force) recordForceRefresh(ticker);
@@ -191,6 +201,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ...result, cached: false });
     }
   } catch (err) {
+    recordUsage({ ticker, type, provider: aiConfig.provider, model: aiConfig.models[aiConfig.provider]?.name ?? 'unknown', cached: false, forced: force, failed: true, error: shortError(err) });
     return NextResponse.json({ error: String(err) }, { status: 502 });
   }
 }

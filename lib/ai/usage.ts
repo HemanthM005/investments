@@ -13,6 +13,8 @@ export interface UsageEntry {
   outputTokens?: number;
   cached: boolean;          // true if served from cache (no tokens consumed)
   forced: boolean;          // true if force-refresh bypassed cache
+  failed?: boolean;         // true if generation threw (still counted because tokens were consumed)
+  error?: string;           // present when failed: short error message for debugging
 }
 
 let writeQueue: Promise<void> = Promise.resolve();
