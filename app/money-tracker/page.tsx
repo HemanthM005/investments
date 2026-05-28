@@ -770,6 +770,16 @@ export default function MoneyTrackerPage() {
   const handleSubmit = (data: Omit<MoneyRecord, 'id'>) => {
     if (editTarget) {
       updateRecord(editTarget.id, data);
+      // Re-sync linked account transactions if anything that affects the ledger changed.
+      const ledgerChanged =
+        editTarget.account_id !== data.account_id ||
+        editTarget.type !== data.type ||
+        editTarget.amount !== data.amount ||
+        editTarget.date !== data.date;
+      if (ledgerChanged) {
+        adjustAccountForRecord(editTarget, /* reverse */ true);
+        adjustAccountForRecord(data);
+      }
       // If person name changed and this record is linked to a split expense, sync back
       if (
         editTarget.source_expense_id &&

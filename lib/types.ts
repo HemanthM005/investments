@@ -14,6 +14,9 @@ export interface Investment {
   research?: string;        // long-form research notes (shown in popup)
   funded_by_account_id?: string;   // AssetAccount.id — account debited when purchased
   funded_by_account_name?: string; // snapshot of account name at purchase time
+  gold_karat?: '24k' | '22k' | '18k'; // Gold only — purity; defaults to 24k if omitted
+  making_charges?: number;             // Gold only — total making/wastage charges paid (₹)
+  gold_gst?: number;                   // Gold only — total GST paid (₹)
   interest_rate?: number;   // Bond only — coupon/interest rate % p.a.
   maturity_date?: string;   // Bond only — YYYY-MM-DD when bond matures
   _deleted?: boolean;       // soft-delete tombstone — filtered from UI, kept in file

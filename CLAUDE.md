@@ -186,3 +186,6 @@ On first load, if a private file doesn't exist, the app falls back to its corres
 To reset a domain's data, delete its `data/<name>.json` — it will be recreated from the example on next load.
 
 Reads/writes go through `app/api/data/route.ts`. Stores call `lib/saveHelper.ts` which posts the changed section back to that route. **Never write to these files directly** (see Data Privacy Rules).
+
+### JSON shape reference
+Every JSON shape (investments by type, bonds, watchlist/sold variants, expenses with splits, money records, habits, planner items, etc.) has a worked example in **[`docs/data-formats.md`](docs/data-formats.md)**. Read that before hand-editing fixtures, writing migrations, or seeding test data.
