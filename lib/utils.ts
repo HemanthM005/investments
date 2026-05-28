@@ -41,7 +41,9 @@ export function computeStats(investments: Investment[]): PortfolioStats {
   let currentValue = 0;
 
   investments.forEach((inv) => {
-    totalInvested += inv.buy_price * inv.quantity;
+    const metalCost = inv.buy_price * inv.quantity;
+    const goldExtra = inv.asset_type === 'Gold' ? (inv.making_charges ?? 0) + (inv.gold_gst ?? 0) : 0;
+    totalInvested += metalCost + goldExtra;
     currentValue += inv.current_price * inv.quantity;
   });
 
@@ -63,8 +65,19 @@ export function computeStats(investments: Investment[]): PortfolioStats {
   return { totalInvested, currentValue, totalPnL, pnlPercent, bestAsset, worstAsset };
 }
 
+export function goldTotalCost(inv: Investment): number {
+  const metalCost = inv.buy_price * inv.quantity;
+  if (inv.asset_type !== 'Gold') return metalCost;
+  return metalCost + (inv.making_charges ?? 0) + (inv.gold_gst ?? 0);
+}
+
 export function getPnlPercent(inv: Investment): number {
   if (inv.buy_price === 0) return 0;
+  if (inv.asset_type === 'Gold') {
+    const totalCost = goldTotalCost(inv);
+    const currentValue = inv.current_price * inv.quantity;
+    return totalCost > 0 ? ((currentValue - totalCost) / totalCost) * 100 : 0;
+  }
   return ((inv.current_price - inv.buy_price) / inv.buy_price) * 100;
 }
 
@@ -85,7 +98,7 @@ export interface CapitalGainsResult {
 export function computeCapitalGains(inv: Investment, soldPrice: number, soldDate: string, charges: number): CapitalGainsResult {
   const grossProceeds = soldPrice * inv.quantity;
   const netProceeds = grossProceeds - charges;
-  const costBasis = inv.buy_price * inv.quantity;
+  const costBasis = goldTotalCost(inv);
   const realizedPnL = netProceeds - costBasis;
 
   const buyDate = new Date(inv.purchase_date);
