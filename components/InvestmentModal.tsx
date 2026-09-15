@@ -477,49 +477,8 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
                     </SelectContent>
                   </Select>
                 </div>
-                  const metalCost  = Math.round(form.buy_price * form.quantity * 100) / 100;
-                  const making     = form.making_charges ?? 0;
-                  const gst        = form.gold_gst ?? 0;
-                  const totalCost  = metalCost + making + gst;
-                  return (
-                    <div className="col-span-2 rounded-md border border-yellow-800/30 bg-yellow-950/15 px-3 py-2.5 text-xs space-y-1">
-                      <div className="flex justify-between text-slate-400">
-                        <span>Metal cost ({form.quantity}g × ₹{form.buy_price.toLocaleString('en-IN')}/g)</span>
-                        <span>₹{metalCost.toLocaleString('en-IN')}</span>
-                      </div>
-                      {making > 0 && (
-                        <div className="flex justify-between text-slate-400">
-                          <span>Making charges</span>
-                          <span>₹{making.toLocaleString('en-IN')}</span>
-                        </div>
-                      )}
-                      {gst > 0 && (
-                        <div className="flex justify-between text-slate-400">
-                          <span>GST</span>
-                          <span>₹{gst.toLocaleString('en-IN')}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between font-semibold text-yellow-300 border-t border-yellow-800/30 pt-1 mt-1">
-                        <span>Total paid</span>
-                        <span>₹{totalCost.toLocaleString('en-IN')}</span>
-                      </div>
-                      {(making > 0 || gst > 0) && (
-                        <p className="text-slate-500 mt-0.5">
-                          Making + GST (₹{(making + gst).toLocaleString('en-IN')}) are sunk costs — not recoverable on resale.
-                        </p>
-                      )}
-                    </div>
-                  );
-                })()}
 
                 {/* Live price note */}
-                <div className="col-span-2 rounded-md border border-yellow-800/40 bg-yellow-950/20 px-3 py-2 text-xs text-yellow-300">
-                  {form.gold_karat === '24k' || !form.gold_karat
-                    ? 'Live 24K spot price (₹/g) fetched via COMEX + India duty. Enter metal rate above (not total cost).'
-                    : form.gold_karat === '22k'
-                    ? 'Current rate auto-set to 24K spot × 91.67%. Enter the metal rate you paid per gram above.'
-                    : 'Current rate auto-set to 24K spot × 75%. Enter the metal rate you paid per gram above.'}
-=======
                 <div className="col-span-2 rounded-md border border-yellow-800/40 bg-yellow-950/20 px-3 py-2 text-xs text-yellow-300">
                   Live 24K gold spot price (₹/gram) is fetched automatically and scaled to{' '}
                   <strong>{form.gold_purity ?? '24K'}</strong> purity
@@ -527,7 +486,6 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
                     <> (×{(GOLD_PURITY_FACTORS[form.gold_purity ?? '24K']).toFixed(4)})</>
                   )}.
                   Set <strong>Quantity</strong> to the number of grams you hold (1 SGB unit = 1 gram).
->>>>>>> 5dd0ee2 (Feat: Gold investments, SIP tracker, spent-for expenses, glass theme, and multi-account expenses)
                 </div>
               </>
             )}

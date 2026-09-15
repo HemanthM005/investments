@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { TrendingUp, BarChart2, FileText, Landmark, HandCoins, PiggyBank, Receipt, RefreshCw, GitCompare, Flame, CalendarCheck, Activity, Heart, Sparkles, Repeat } from 'lucide-react';
+import { TrendingUp, BarChart2, FileText, Landmark, HandCoins, PiggyBank, Receipt, RefreshCw, GitCompare, Flame, CalendarCheck, Activity, Heart, Sparkles, Repeat, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/appStore';
 
@@ -15,6 +15,7 @@ const navLinks = [
   { href: '/sips', label: 'SIPs', icon: Repeat },
   { href: '/money-tracker', label: 'Money Tracker', icon: HandCoins },
   { href: '/cash-accounts', label: 'Cash & Accounts', icon: PiggyBank },
+  { href: '/message-parser', label: 'Message Parser', icon: Zap },
   { href: '/habit-tracker', label: 'Habit Tracker', icon: Flame },
   { href: '/planner', label: 'Daily Planner', icon: CalendarCheck },
   { href: '/india-sectors-report', label: 'India Sectors Report', icon: FileText },
