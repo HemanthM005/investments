@@ -69,7 +69,9 @@ Return ONLY the JSON object, no markdown or extra text.`;
     });
 
     if (!response.ok) {
-      throw new Error(`Groq API error: ${response.statusText}`);
+      const errorData = await response.json();
+      console.error('Groq API error:', errorData);
+      throw new Error(`Groq API error: ${JSON.stringify(errorData)}`);
     }
 
     const data = await response.json();
