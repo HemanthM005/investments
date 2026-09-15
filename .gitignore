@@ -41,3 +41,4 @@ tsconfig.tsbuildinfo
 # Claude Code harness state (machine-local)
 .claude/scheduled_tasks.lock
 .claude/*.lock
+.vercel

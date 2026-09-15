@@ -1,0 +1,24 @@
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.investments.app',
+  appName: 'InvestmentApp',
+  webDir: 'public',
+  server: {
+    androidScheme: 'https',
+    url: 'https://investments-five-snowy.vercel.app',
+  },
+  android: {
+    allowMixedContent: true,
+  },
+  plugins: {
+    CapacitorSQLite: {
+      iosDatabaseLocation: 'Documents',
+      iosEncryption: false,
+      androidEncryption: false,
+      androidIsEncryption: false,
+    },
+  },
+};
+
+export default config;
