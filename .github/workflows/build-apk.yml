@@ -1,0 +1,74 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: investment-app-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: apk-${{ github.run_number }}
+          release_name: APK Build ${{ github.run_number }}
+          body: |
+            📱 Investment Portfolio Android APK
+
+            Download `investment-app-apk.zip` and extract the `.apk` file.
+
+            **Install on Android:**
+            1. Enable Unknown Sources in Settings
+            2. Tap APK to install
+            3. App auto-connects to cloud
+
+            Built from: ${{ github.sha }}
+        draft: false
+        prerelease: false
+
+      - name: Upload to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: android/app/build/outputs/apk/release/app-release.apk
+          asset_name: Investment-Portfolio.apk
+          asset_content_type: application/vnd.android.package-archive
