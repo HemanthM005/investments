@@ -1,5 +1,3 @@
-import { Anthropic } from '@anthropic-ai/sdk';
-
 interface ParsedMessage {
   raw_text: string;
   type: 'expense' | 'income' | 'payment' | 'transfer' | 'subscription' | 'unknown';
@@ -13,10 +11,6 @@ interface ParsedMessage {
   account_name?: string; // if mentioned (HDFC, ICICI, Paytm, etc.)
   confidence: number; // 0-1, how confident the parser is
 }
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
 
 export async function POST(req: Request) {
   try {
@@ -55,19 +49,31 @@ Guidelines:
 
 Return ONLY the JSON object, no markdown or extra text.`;
 
-    const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 500,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'mixtral-8x7b-32768',
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        max_tokens: 500,
+        temperature: 0.3,
+      }),
     });
 
-    const responseText =
-      message.content[0].type === 'text' ? message.content[0].text : '';
+    if (!response.ok) {
+      throw new Error(`Groq API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const responseText = data.choices[0].message.content;
 
     let parsed: ParsedMessage;
     try {
