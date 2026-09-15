@@ -36,39 +36,40 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease
 
-      - name: Upload APK
+      - name: Upload APK as Artifact
         uses: actions/upload-artifact@v4
+        if: success()
         with:
-          name: investment-app-apk
+          name: Investment-Portfolio-APK
           path: android/app/build/outputs/apk/release/app-release.apk
 
-      - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: success()
         with:
-          tag_name: apk-${{ github.run_number }}
-          release_name: APK Build ${{ github.run_number }}
+          tag_name: apk-build-${{ github.run_number }}
+          name: 📱 APK Build #${{ github.run_number }}
+          files: android/app/build/outputs/apk/release/app-release.apk
           body: |
-            📱 Investment Portfolio Android APK
+            ## Investment Portfolio Android APK
 
-            Download `investment-app-apk.zip` and extract the `.apk` file.
+            **Download:** Click on the `.apk` file above
 
-            **Install on Android:**
-            1. Enable Unknown Sources in Settings
-            2. Tap APK to install
-            3. App auto-connects to cloud
+            **Installation:**
+            1. Transfer APK to your Android phone
+            2. Go to Settings → Security → Enable "Unknown Sources"
+            3. Tap the APK file to install
+            4. App opens → auto-connects to cloud ✓
 
-            Built from: ${{ github.sha }}
-        draft: false
-        prerelease: false
+            **Share with Users:**
+            - Upload this APK to Google Drive / Dropbox
+            - Share the link
+            - Users follow the installation steps above
 
-      - name: Upload to Release
-        uses: actions/upload-release-asset@v1
+            **Build Info:**
+            - Built from: ${{ github.sha }}
+            - Timestamp: ${{ github.event.head_commit.timestamp }}
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: android/app/build/outputs/apk/release/app-release.apk
-          asset_name: Investment-Portfolio.apk
-          asset_content_type: application/vnd.android.package-archive
