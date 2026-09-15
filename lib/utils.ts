@@ -1,9 +1,22 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { Investment, PortfolioStats } from './types';
+import type { GoldPurity, Investment, PortfolioStats } from './types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+// Gold purity → fraction of 24K (fine) gold. Live price is 24K spot × this factor.
+export const GOLD_PURITY_OPTIONS: GoldPurity[] = ['24K', '22K', '18K'];
+export const GOLD_PURITY_FACTORS: Record<GoldPurity, number> = {
+  '24K': 1,
+  '22K': 22 / 24, // 91.6% pure
+  '18K': 18 / 24, // 75% pure
+};
+
+// Purity multiplier for a gold holding; undefined/legacy holdings are treated as 24K.
+export function goldPurityFactor(purity?: GoldPurity): number {
+  return purity ? GOLD_PURITY_FACTORS[purity] : 1;
 }
 
 export function formatCurrency(amount: number): string {

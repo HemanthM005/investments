@@ -6,6 +6,7 @@ import { useMoneyStore } from '@/lib/moneyStore';
 import { useAssetStore } from '@/lib/assetStore';
 import { useExpenseStore } from '@/lib/expenseStore';
 import { useRecurringStore } from '@/lib/recurringStore';
+import { useRecurringInvestmentStore } from '@/lib/recurringInvestmentStore';
 
 export default function HydrationProvider({ children }: { children: React.ReactNode }) {
   const hydrateInvestments = useInvestmentStore((s) => s.hydrate);
@@ -13,7 +14,7 @@ export default function HydrationProvider({ children }: { children: React.ReactN
   const hydrateAssets      = useAssetStore((s) => s.hydrate);
   const hydrateExpenses    = useExpenseStore((s) => s.hydrate);
   const hydrateRecurring   = useRecurringStore((s) => s.hydrate);
-
+  const hydrateSips        = useRecurringInvestmentStore((s) => s.hydrate);
   useEffect(() => {
     async function init() {
       await Promise.all([
@@ -22,6 +23,7 @@ export default function HydrationProvider({ children }: { children: React.ReactN
         hydrateAssets(),
         hydrateExpenses(),
         hydrateRecurring(),
+        hydrateSips(),
       ]);
 
       // Remove money records linked to expenses that no longer exist (orphan cleanup).
@@ -35,7 +37,7 @@ export default function HydrationProvider({ children }: { children: React.ReactN
         .forEach((r) => deleteRecord(r.id));
     }
     init();
-  }, [hydrateInvestments, hydrateMoney, hydrateAssets, hydrateExpenses, hydrateRecurring]);
+  }, [hydrateInvestments, hydrateMoney, hydrateAssets, hydrateExpenses, hydrateRecurring, hydrateSips]);
 
   return <>{children}</>;
 }

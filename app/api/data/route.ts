@@ -19,6 +19,7 @@ type PortfolioData = {
   accounts: unknown[];
   expenses: unknown[];
   recurring: unknown[];
+  recurring_investments: unknown[];
   audit_log: AuditEntry[];
 };
 
@@ -28,6 +29,7 @@ const EMPTY: PortfolioData = {
   accounts: [],
   expenses: [],
   recurring: [],
+  recurring_investments: [],
   audit_log: [],
 };
 

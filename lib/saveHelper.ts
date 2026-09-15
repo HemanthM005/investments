@@ -2,7 +2,7 @@
 
 import { useAppStore } from './appStore';
 
-type SectionName = 'investments' | 'money_records' | 'accounts' | 'expenses' | 'recurring';
+type SectionName = 'investments' | 'money_records' | 'accounts' | 'expenses' | 'recurring' | 'recurring_investments';
 
 function isAbortError(e: unknown): boolean {
   return e instanceof DOMException && e.name === 'AbortError';

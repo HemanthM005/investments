@@ -1,3 +1,5 @@
+export type GoldPurity = '18K' | '22K' | '24K';
+
 export interface Investment {
   id: string;
   asset_name: string;
@@ -19,6 +21,7 @@ export interface Investment {
   gold_gst?: number;                   // Gold only — total GST paid (₹)
   interest_rate?: number;   // Bond only — coupon/interest rate % p.a.
   maturity_date?: string;   // Bond only — YYYY-MM-DD when bond matures
+  gold_purity?: GoldPurity; // Gold only — karat; live price scaled by purity (omitted = 24K)
   _deleted?: boolean;       // soft-delete tombstone — filtered from UI, kept in file
   // Sale details — populated when status === 'sold'
   sold_price?: number;               // per-unit sale price
@@ -119,6 +122,17 @@ export interface Expense {
   splits?: ExpenseSplit[];
   paid_by_name?: string;             // if set, this person paid (not "me") — triggers borrowed record in Money Tracker
   payment_sources?: PaymentSource[]; // multi-source payment; when set, takes precedence over payment_source_id
+  spent_for?: string;                // if set, this expense was for someone else (family / close ones)
+}
+
+export interface SpentFor {
+  id: string;
+  person_name: string;         // who this was for — Brother, Mom, Friend Name, etc.
+  amount: number;
+  date: string;                // YYYY-MM-DD
+  description: string;         // what was bought — "Gold ring", "Birthday dinner"
+  payment_source_id?: string;  // AssetAccount.id — debited on save
+  payment_source_name?: string;
 }
 
 export type RecurringFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'Quarterly' | 'Yearly';
@@ -135,6 +149,25 @@ export interface RecurringExpense {
   start_date: string;
   active: boolean;               // false = paused
   notes: string;
+}
+
+export interface RecurringInvestment {
+  id: string;
+  name: string;                    // e.g. "Daily Gold SIP", "Monthly Flexi Cap SIP"
+  amount: number;                  // ₹ deployed per installment
+  frequency: RecurringFrequency;   // Daily | Weekly | Monthly | Quarterly | Yearly
+  funded_by_account_id: string;    // AssetAccount.id debited each run
+  funded_by_account_name: string;  // snapshot of account name
+  target_investment_id: string;    // Investment this SIP accumulates into
+  target_investment_name: string;  // snapshot of holding name for display
+  next_due: string;                // YYYY-MM-DD — when the next installment is due
+  start_date: string;
+  active: boolean;                 // false = paused
+  notes: string;
+  // tracking — updated on each execution
+  total_invested?: number;         // cumulative ₹ deployed
+  installments_done?: number;      // count of executed installments
+  last_executed?: string;          // YYYY-MM-DD of most recent run
 }
 
 export interface PortfolioStats {

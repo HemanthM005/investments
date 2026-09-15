@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import type { Investment } from '@/lib/types';
 import { useAssetStore } from '@/lib/assetStore';
+import { GOLD_PURITY_FACTORS, GOLD_PURITY_OPTIONS } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -62,6 +63,7 @@ const EMPTY_FORM: Omit<Investment, 'id'> = {
   gold_karat: '24k',
   interest_rate: 0,
   maturity_date: '',
+  gold_purity: '24K',
 };
 
 // Bond current value = principal + simple interest accrued from purchase to today (capped at maturity)
@@ -457,68 +459,24 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
 
             {form.asset_type === 'Gold' && (
               <>
-                {/* Karat selector */}
-                <div className="col-span-2 space-y-1.5">
-                  <Label>Gold Purity (Karat)</Label>
+                <div className="space-y-1.5">
+                  <Label>Gold Purity *</Label>
                   <Select
-                    value={form.gold_karat ?? '24k'}
-                    onValueChange={(v) => setField('gold_karat', v as '24k' | '22k' | '18k')}
+                    value={form.gold_purity ?? '24K'}
+                    onValueChange={(v) => setField('gold_purity', v as Investment['gold_purity'])}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {GOLD_KARATS.map((k) => (
-                        <SelectItem key={k} value={k}>{KARAT_LABEL[k]}</SelectItem>
+                      {GOLD_PURITY_OPTIONS.map((k) => (
+                        <SelectItem key={k} value={k}>
+                          {k} ({Math.round(GOLD_PURITY_FACTORS[k] * 1000) / 10}% pure)
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Making charges */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="making_charges">Making Charges (₹)</Label>
-                  <Input
-                    id="making_charges"
-                    type="number"
-                    step="1"
-                    placeholder="0"
-                    value={form.making_charges || ''}
-                    onChange={(e) => setField('making_charges', parseFloat(e.target.value) || 0)}
-                  />
-                  <p className="text-xs text-slate-500">Labour / wastage charged by jeweller</p>
-                </div>
-
-                {/* GST */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="gold_gst">GST Paid (₹)</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="gold_gst"
-                      type="number"
-                      step="1"
-                      placeholder="0"
-                      value={form.gold_gst || ''}
-                      onChange={(e) => setField('gold_gst', parseFloat(e.target.value) || 0)}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const metalCost = (form.buy_price || 0) * (form.quantity || 0);
-                        const gst = Math.round((metalCost + (form.making_charges ?? 0)) * 0.03);
-                        setField('gold_gst', gst);
-                      }}
-                      className="shrink-0 rounded-md border border-[#2a2d3e] px-2.5 text-xs text-slate-400 hover:text-yellow-300 hover:border-yellow-800/60 transition-colors"
-                      title="Auto-calculate: 3% of (metal + making)"
-                    >
-                      3%
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-500">3% of (metal + making) per India GST rules</p>
-                </div>
-
-                {/* Cost breakdown */}
-                {(form.buy_price > 0 && form.quantity > 0) && (() => {
                   const metalCost  = Math.round(form.buy_price * form.quantity * 100) / 100;
                   const making     = form.making_charges ?? 0;
                   const gst        = form.gold_gst ?? 0;
@@ -561,6 +519,15 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
                     : form.gold_karat === '22k'
                     ? 'Current rate auto-set to 24K spot × 91.67%. Enter the metal rate you paid per gram above.'
                     : 'Current rate auto-set to 24K spot × 75%. Enter the metal rate you paid per gram above.'}
+=======
+                <div className="col-span-2 rounded-md border border-yellow-800/40 bg-yellow-950/20 px-3 py-2 text-xs text-yellow-300">
+                  Live 24K gold spot price (₹/gram) is fetched automatically and scaled to{' '}
+                  <strong>{form.gold_purity ?? '24K'}</strong> purity
+                  {(form.gold_purity ?? '24K') !== '24K' && (
+                    <> (×{(GOLD_PURITY_FACTORS[form.gold_purity ?? '24K']).toFixed(4)})</>
+                  )}.
+                  Set <strong>Quantity</strong> to the number of grams you hold (1 SGB unit = 1 gram).
+>>>>>>> 5dd0ee2 (Feat: Gold investments, SIP tracker, spent-for expenses, glass theme, and multi-account expenses)
                 </div>
               </>
             )}

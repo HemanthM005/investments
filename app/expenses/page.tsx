@@ -460,6 +460,18 @@ function ExpenseModal({
             )}
           </div>
 
+          {/* For someone */}
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">
+              For someone? <span className="text-slate-600">(optional — family &amp; close ones)</span>
+            </label>
+            <PersonInput
+              value={form.spent_for ?? ''}
+              onChange={(v) => setField('spent_for', v || undefined)}
+              suggestions={existingPersonNames}
+            />
+          </div>
+
           {/* Notes */}
           <div>
             <label className="text-xs text-slate-400 mb-1 block">Notes (optional)</label>
@@ -722,6 +734,7 @@ export default function ExpensesPage() {
       .sort((a, b) => b.amt - a.amt);
   }, [monthExpenses]);
 
+
   // All unique account names for filter
   const accountOptions = useMemo(() => {
     const names = new Set(expenses.map((e) => e.payment_source_name).filter(Boolean));
@@ -896,6 +909,12 @@ export default function ExpensesPage() {
                                 <>
                                   <span className="text-slate-700">·</span>
                                   <span className="text-slate-600">{exp.notes}</span>
+                                </>
+                              )}
+                              {exp.spent_for && (
+                                <>
+                                  <span className="text-slate-700">·</span>
+                                  <span className="text-rose-400">❤️ for {exp.spent_for}</span>
                                 </>
                               )}
                               {exp.splits && exp.splits.length > 0 && (

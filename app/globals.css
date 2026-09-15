@@ -39,3 +39,108 @@ body {
   border: 1px solid #2a2d3e !important;
   border-radius: 8px !important;
 }
+
+/* ── Theme CSS variables ──────────────────────────────────── */
+:root {
+  --card-bg: #1a1d2e;
+  --card-border: #2a2d3e;
+  --input-bg: #0f1117;
+  --nav-bg: #12151f;
+  --nav-border: #2a2d3e;
+}
+
+/* ── Glass theme ──────────────────────────────────────────── */
+[data-theme="glass"] {
+  /* Deep navy-blue palette — clearly distinct from classic */
+  --card-bg: #0d1b2e;
+  --card-border: rgba(56, 189, 248, 0.14);
+  --input-bg: #07111e;
+  --nav-bg: #060e1c;
+  --nav-border: rgba(56, 189, 248, 0.12);
+  background: linear-gradient(145deg, #050c1a 0%, #091422 55%, #060c1e 100%) !important;
+  min-height: 100vh;
+}
+
+[data-theme="glass"] nav {
+  background: var(--nav-bg) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom-color: var(--nav-border) !important;
+}
+
+[data-theme="glass"] .glass-card {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(56, 189, 248, 0.06);
+}
+
+/* Override hardcoded dark inset backgrounds (input fields, inner panels) */
+[data-theme="glass"] .bg-\[\#0f1117\] {
+  background-color: var(--input-bg) !important;
+}
+[data-theme="glass"] .bg-\[\#12151f\] {
+  background-color: var(--nav-bg) !important;
+}
+[data-theme="glass"] .bg-\[\#1a1d2e\] {
+  background-color: var(--card-bg) !important;
+}
+[data-theme="glass"] .border-\[\#2a2d3e\] {
+  border-color: var(--card-border) !important;
+}
+
+/* inputs, selects in glass mode */
+[data-theme="glass"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="glass"] select,
+[data-theme="glass"] textarea {
+  background: var(--input-bg) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* recharts tooltip glass override */
+[data-theme="glass"] .recharts-default-tooltip {
+  background-color: #0d1b2e !important;
+  border-color: rgba(56, 189, 248, 0.2) !important;
+}
+
+/* scrollbar glass override */
+[data-theme="glass"] ::-webkit-scrollbar-track { background: #07111e; }
+[data-theme="glass"] ::-webkit-scrollbar-thumb { background: #1a3050; }
+[data-theme="glass"] ::-webkit-scrollbar-thumb:hover { background: #1e3a5f; }
+
+/* Coloured top-border glow for stat cards in glass mode */
+[data-theme="glass"] .stat-gain {
+  box-shadow: 0 -2px 0 0 #10b981 inset, 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+[data-theme="glass"] .stat-loss {
+  box-shadow: 0 -2px 0 0 #ef4444 inset, 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+[data-theme="glass"] .stat-accent {
+  box-shadow: 0 -2px 0 0 #6366f1 inset, 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+[data-theme="glass"] .stat-blue {
+  box-shadow: 0 -2px 0 0 #3b82f6 inset, 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+[data-theme="glass"] .stat-rose {
+  box-shadow: 0 -2px 0 0 #f43f5e inset, 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+[data-theme="glass"] .stat-teal {
+  box-shadow: 0 -2px 0 0 #14b8a6 inset, 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+[data-theme="glass"] .stat-amber {
+  box-shadow: 0 -2px 0 0 #f59e0b inset, 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Risk alert border glow in glass mode */
+[data-theme="glass"] .alert-success {
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.2), 0 0 0 1px rgba(16, 185, 129, 0.5);
+}
+[data-theme="glass"] .alert-danger {
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.2), 0 0 0 1px rgba(239, 68, 68, 0.5);
+}
+[data-theme="glass"] .alert-warning {
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.2), 0 0 0 1px rgba(245, 158, 11, 0.5);
+}
+
+/* Net worth banner glow in glass mode */
+[data-theme="glass"] .net-worth-card {
+  box-shadow: 0 0 40px rgba(99, 102, 241, 0.15), 0 4px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}

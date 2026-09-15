@@ -15,6 +15,7 @@ import {
   computeStats,
   computeCapitalGains,
   formatHoldingPeriod,
+  goldPurityFactor,
   cn,
 } from '@/lib/utils';
 import InvestmentModal from '@/components/InvestmentModal';
@@ -141,11 +142,11 @@ export default function InvestmentsPage() {
     if (!res.ok) throw new Error(`Price fetch error ${res.status}`);
     const { prices } = await res.json() as { prices: Record<string, number> };
     targets.forEach((inv) => {
-      const key      = type === 'gold' ? 'XAU' : inv.ticker!;
-      const rawPrice = prices[key];
-      if (typeof rawPrice === 'number') {
-        const factor = type === 'gold' ? (KARAT_MULTIPLIER[inv.gold_karat ?? '24k'] ?? 1) : 1;
-        const price  = type === 'gold' ? Math.round(rawPrice * factor * 100) / 100 : rawPrice;
+      const key   = type === 'gold' ? 'XAU' : inv.ticker!;
+      let price = prices[key];
+      if (typeof price === 'number') {
+        // Gold spot is 24K; scale to this holding's purity (18K/22K/24K)
+        if (type === 'gold') price = Math.round(price * goldPurityFactor(inv.gold_purity) * 100) / 100;
         updateInvestment(inv.id, { current_price: price });
         setLiveIds((prev) => new Set(prev).add(inv.id));
       }
@@ -598,9 +599,8 @@ export default function InvestmentsPage() {
                             </p>
                           )}
                           {inv.asset_type === 'Gold' && (
-                            <p className="text-[10px] text-yellow-600/80 mt-0.5">
-                              {inv.gold_karat ?? '24k'}
-                              {inv.quantity > 0 && ` · ${inv.quantity}g`}
+                            <p className="text-[10px] text-yellow-400/80 mt-0.5">
+                              {inv.gold_purity ?? '24K'} · ₹/gram
                             </p>
                           )}
                         </TableCell>
