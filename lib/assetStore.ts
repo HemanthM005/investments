@@ -15,7 +15,10 @@ interface AssetStore {
   addAccount: (account: Omit<AssetAccount, 'id'>) => void;
   updateAccount: (id: string, account: Partial<AssetAccount>) => void;
   deleteAccount: (id: string) => void;
-  addTransaction: (accountId: string, tx: Omit<AccountTransaction, 'id'>, linkedAccountId?: string) => void;
+  // persist=false updates in-memory state and returns the new accounts array
+  // WITHOUT saving, so the caller can persist accounts together with another
+  // section (e.g. money_records) in a single atomic write via saveSections().
+  addTransaction: (accountId: string, tx: Omit<AccountTransaction, 'id'>, linkedAccountId?: string, persist?: boolean) => AssetAccount[];
   deleteTransaction: (accountId: string, txId: string) => void;
 }
 
@@ -52,7 +55,7 @@ export const useAssetStore = create<AssetStore>()((set, get) => ({
     saveToFile(updated);
   },
 
-  addTransaction: (accountId, tx, linkedAccountId) => {
+  addTransaction: (accountId, tx, linkedAccountId, persist = true) => {
     const pairId = linkedAccountId ? crypto.randomUUID() : undefined;
     const accounts = get().accounts;
     const mainAccount   = accounts.find((a) => a.id === accountId);
@@ -87,7 +90,8 @@ export const useAssetStore = create<AssetStore>()((set, get) => ({
       return a;
     });
     set({ accounts: updated });
-    saveToFile(updated);
+    if (persist) saveToFile(updated);
+    return updated;
   },
 
   deleteTransaction: (accountId, txId) => {

@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle, TrendingUp, TrendingDown, Star, AlertCircle,
-  HandCoins, DollarSign, Percent, Wallet, PiggyBank, Landmark, Receipt, RefreshCw, Bell,
+  HandCoins, DollarSign, Percent, Wallet, PiggyBank, Landmark, Receipt, RefreshCw, Bell, Heart,
 } from 'lucide-react';
 import { useInvestmentStore } from '@/lib/store';
 import { useMoneyStore, getOutstandingLent, getOutstandingBorrowed } from '@/lib/moneyStore';
@@ -39,6 +39,18 @@ export default function DashboardPage() {
   ).slice(0, 3), [expenses]);
   const monthlySubCost     = useMemo(() => getTotalMonthly(recurring), [recurring]);
   const dueSoonSubs        = useMemo(() => getDueSoon(recurring, 7), [recurring]);
+  const spentForExpenses   = useMemo(() => expenses.filter((e) => !!e.spent_for), [expenses]);
+  const spentForTotal      = useMemo(() => spentForExpenses.reduce((s, e) => s + e.amount, 0), [spentForExpenses]);
+  const spentForPeople     = useMemo(() => {
+    const map: Record<string, { total: number; count: number }> = {};
+    spentForExpenses.forEach((e) => {
+      const p = e.spent_for!;
+      if (!map[p]) map[p] = { total: 0, count: 0 };
+      map[p].total += e.amount;
+      map[p].count += 1;
+    });
+    return Object.entries(map).map(([person, { total, count }]) => ({ person, total, count })).sort((a, b) => b.total - a.total);
+  }, [spentForExpenses]);
   const netWorth           = stats.currentValue + totalLent - totalBorrowed + totalCashAccounts;
   const isGain        = stats.totalPnL >= 0;
   const isNetPositive = netWorth >= 0;
@@ -193,6 +205,61 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* ── SPENT FOR OTHERS ─────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-slate-500 uppercase tracking-wider font-medium flex items-center gap-1.5">
+            <Heart className="h-3.5 w-3.5 text-rose-400" />
+            Spent for Others
+          </p>
+          <Link href="/for-others" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+            View all →
+          </Link>
+        </div>
+        {spentForExpenses.length === 0 ? (
+          <Card className="border-dashed border-[#2a2d3e]">
+            <CardContent className="p-5 text-center">
+              <Heart className="h-8 w-8 text-slate-600 mx-auto mb-2" />
+              <p className="text-sm text-slate-500">Nothing tracked yet.</p>
+              <Link href="/for-others" className="text-xs text-rose-400 hover:text-rose-300 mt-1 inline-block">
+                Track money spent for family &amp; close ones →
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Total card */}
+            <Card className="border-rose-800/30">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total</span>
+                  <div className="h-8 w-8 rounded-lg bg-rose-900/40 flex items-center justify-center">
+                    <Heart className="h-4 w-4 text-rose-400" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-rose-300">{formatCurrency(spentForTotal)}</div>
+                <p className="text-xs text-slate-500 mt-1">{spentForExpenses.length} entries · {spentForPeople.length} people</p>
+              </CardContent>
+            </Card>
+            {/* Per-person cards — top 3 */}
+            {spentForPeople.slice(0, 3).map(({ person, total, count }) => (
+              <Card key={person}>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-medium text-slate-400 uppercase tracking-wider truncate pr-1">{person}</span>
+                    <span className="text-base flex-shrink-0">❤️</span>
+                  </div>
+                  <div className="text-2xl font-bold text-slate-100">{formatCurrency(total)}</div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {count} time{count !== 1 ? 's' : ''} · {spentForTotal > 0 ? ((total / spentForTotal) * 100).toFixed(0) : 0}% of total
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── MONEY TRACKER STATS ──────────────────────────────────────── */}

@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { saveSections } from '@/lib/saveHelper';
 import type { MoneyRecord, AssetAccount } from '@/lib/types';
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -564,11 +565,17 @@ function PersonGroup({
       'bg-[#1a1d2e] border rounded-xl overflow-hidden',
       allSettled ? 'border-[#2a2d3e]' : netType === 'lent' ? 'border-emerald-800/40' : 'border-red-800/40',
     )}>
-      {/* Clickable header — toggles collapse */}
-      <button
-        type="button"
+      {/* Clickable header — toggles collapse.
+          A <div role="button"> (not <button>) so the nested "Settle All"
+          button is valid HTML — a button inside a button is invalid nesting. */}
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); }
+        }}
+        className="w-full flex items-center justify-between px-4 py-3 text-left cursor-pointer hover:bg-white/[0.02] transition-colors"
       >
         <div className="flex items-center gap-2 min-w-0">
           <ChevronDown className={cn(
@@ -607,7 +614,7 @@ function PersonGroup({
             )}
           </div>
         </div>
-      </button>
+      </div>
 
       {/* Collapsible records list */}
       {expanded && (
@@ -708,7 +715,7 @@ function adjustAccountForRecord(
 }
 
 export default function MoneyTrackerPage() {
-  const { records, addRecord, updateRecord, deleteRecord, markSettled } = useMoneyStore();
+  const { records, addRecord, updateRecord, deleteRecord, markSettled, markManySettled } = useMoneyStore();
   const updateExpense = useExpenseStore((s) => s.updateExpense);
   const expenses = useExpenseStore((s) => s.expenses);
   const { accounts, addTransaction } = useAssetStore();
@@ -770,6 +777,16 @@ export default function MoneyTrackerPage() {
   const handleSubmit = (data: Omit<MoneyRecord, 'id'>) => {
     if (editTarget) {
       updateRecord(editTarget.id, data);
+      // Re-sync linked account transactions if anything that affects the ledger changed.
+      const ledgerChanged =
+        editTarget.account_id !== data.account_id ||
+        editTarget.type !== data.type ||
+        editTarget.amount !== data.amount ||
+        editTarget.date !== data.date;
+      if (ledgerChanged) {
+        adjustAccountForRecord(editTarget, /* reverse */ true);
+        adjustAccountForRecord(data);
+      }
       // If person name changed and this record is linked to a split expense, sync back
       if (
         editTarget.source_expense_id &&
@@ -807,25 +824,40 @@ export default function MoneyTrackerPage() {
       .reduce((s, r) => s + (r.amount - r.settled_amount), 0);
     const net = lentOut - borrowedOut;
 
-    // Distribute settleAmount sequentially across unsettled records
+    // Distribute settleAmount sequentially across unsettled records.
     let remaining = settleAmount;
+    const settlements: { id: string; amount: number }[] = [];
     unsettled.forEach((r) => {
       if (remaining <= 0) return;
       const outstanding = r.amount - r.settled_amount;
       const toSettle = Math.min(outstanding, remaining);
-      markSettled(r.id, toSettle);
+      settlements.push({ id: r.id, amount: toSettle });
       remaining -= toSettle;
     });
 
-    // Log a single transaction on the chosen account
+    // Apply settlements + the account transaction to in-memory state without
+    // saving, then persist BOTH sections in ONE atomic write. This avoids both
+    // the within-section race (many money_records saves) and the cross-section
+    // race (money_records vs accounts clobbering each other).
+    const newRecords = markManySettled(settlements, /* persist */ false);
+    const sections: Parameters<typeof saveSections>[0] = { money_records: newRecords };
+
     if (accountId && settleAmount > 0) {
-      addTransaction(accountId, {
-        date: new Date().toISOString().split('T')[0],
-        type: net > 0 ? 'credit' : 'debit',
-        amount: settleAmount,
-        note: `Settlement — ${personSettleTarget.name}`,
-      });
+      const newAccounts = addTransaction(
+        accountId,
+        {
+          date: new Date().toISOString().split('T')[0],
+          type: net > 0 ? 'credit' : 'debit',
+          amount: settleAmount,
+          note: `Settlement — ${personSettleTarget.name}`,
+        },
+        undefined,
+        /* persist */ false,
+      );
+      sections.accounts = newAccounts;
     }
+
+    saveSections(sections, 'settle-person');
     setPersonSettleTarget(null);
   };
 
@@ -1011,15 +1043,24 @@ export default function MoneyTrackerPage() {
           accounts={accounts}
           onClose={() => setSettleTarget(null)}
           onSettle={(amount, accountId) => {
-            markSettled(settleTarget.id, amount);
+            // Update both sections in memory, persist atomically in one write.
+            const newRecords = markSettled(settleTarget.id, amount, /* persist */ false);
+            const sections: Parameters<typeof saveSections>[0] = { money_records: newRecords };
             if (accountId) {
-              addTransaction(accountId, {
-                date: new Date().toISOString().split('T')[0],
-                type: settleTarget.type === 'lent' ? 'credit' : 'debit',
-                amount,
-                note: `Settlement — ${settleTarget.person_name}${settleTarget.description ? ` — ${settleTarget.description}` : ''}`,
-              });
+              const newAccounts = addTransaction(
+                accountId,
+                {
+                  date: new Date().toISOString().split('T')[0],
+                  type: settleTarget.type === 'lent' ? 'credit' : 'debit',
+                  amount,
+                  note: `Settlement — ${settleTarget.person_name}${settleTarget.description ? ` — ${settleTarget.description}` : ''}`,
+                },
+                undefined,
+                /* persist */ false,
+              );
+              sections.accounts = newAccounts;
             }
+            saveSections(sections, 'settle-record');
           }}
         />
       )}

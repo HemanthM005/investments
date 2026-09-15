@@ -16,7 +16,11 @@ interface MoneyStore {
   addRecord: (record: Omit<MoneyRecord, 'id'>) => void;
   updateRecord: (id: string, record: Partial<MoneyRecord>) => void;
   deleteRecord: (id: string) => void;
-  markSettled: (id: string, amount: number) => void;
+  // persist=false updates in-memory state and returns the new array WITHOUT
+  // saving, so the caller can persist money_records together with another
+  // section (e.g. accounts) in a single atomic write via saveSections().
+  markSettled: (id: string, amount: number, persist?: boolean) => MoneyRecord[];
+  markManySettled: (settlements: { id: string; amount: number }[], persist?: boolean) => MoneyRecord[];
 }
 
 export const useMoneyStore = create<MoneyStore>()((set, get) => ({
@@ -52,7 +56,7 @@ export const useMoneyStore = create<MoneyStore>()((set, get) => ({
     saveToFile(updated);
   },
 
-  markSettled: (id, amount) => {
+  markSettled: (id, amount, persist = true) => {
     const updated = get().records.map((r) => {
       if (r.id !== id) return r;
       const newSettled = Math.min(r.settled_amount + amount, r.amount);
@@ -63,7 +67,30 @@ export const useMoneyStore = create<MoneyStore>()((set, get) => ({
       } as MoneyRecord;
     });
     set({ records: updated });
-    saveToFile(updated);
+    if (persist) saveToFile(updated);
+    return updated;
+  },
+
+  // Apply several settlements in ONE state update + (optionally) ONE save.
+  // Settling many records via repeated markSettled() calls fires a save per
+  // record; those un-awaited POSTs can arrive out of order and a stale payload
+  // can clobber the final state (overwrite, not merge), silently reverting some
+  // records to pending. Batching avoids that race entirely.
+  markManySettled: (settlements, persist = true) => {
+    const byId = new Map(settlements.map((s) => [s.id, s.amount]));
+    const updated = get().records.map((r) => {
+      const amount = byId.get(r.id);
+      if (amount === undefined) return r;
+      const newSettled = Math.min(r.settled_amount + amount, r.amount);
+      return {
+        ...r,
+        settled_amount: newSettled,
+        status: newSettled >= r.amount ? 'settled' : newSettled > 0 ? 'partial' : 'pending',
+      } as MoneyRecord;
+    });
+    set({ records: updated });
+    if (persist) saveToFile(updated);
+    return updated;
   },
 }));
 

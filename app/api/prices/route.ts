@@ -17,7 +17,7 @@ const cache: {
 
 // ── USD → INR exchange rate via Frankfurter (ECB data, free, no key) ─────────
 async function fetchUsdToInr(): Promise<number> {
-  const res = await fetch('https://api.frankfurter.app/latest?from=USD&to=INR', {
+  const res = await fetch('https://api.frankfurter.dev/v1/latest?from=USD&to=INR', {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
   });
@@ -111,10 +111,11 @@ async function fetchMfNavs(schemeCodes: string[]): Promise<Record<string, number
 }
 
 // ── India 24K gold price via COMEX (Yahoo Finance GC=F) + India duty ─────────
-// COMEX gives international USD/oz. India domestic price includes:
-//   Basic Customs Duty (6%) + Agriculture Cess (5%) + GST (3%) ≈ 13% premium
-// Last verified vs goodreturns.in Hyderabad rate: 2026-03-19
-const INDIA_GOLD_DUTY_FACTOR = 1.13;
+// COMEX gives international USD/oz. India domestic price runs above it due to
+// import duty + cess + 3% GST. This premium drifts, so re-verify periodically:
+// compare (COMEX/oz → INR/g) × factor against goodreturns.in Hyderabad 24K.
+// Last verified vs goodreturns.in Hyderabad 22K (₹13,090/g): 2026-07-15 → ~15% premium
+const INDIA_GOLD_DUTY_FACTOR = 1.15;
 
 async function getGoldInrPerGram(): Promise<number> {
   const hit = cache.gold;

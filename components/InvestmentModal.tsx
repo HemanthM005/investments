@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import type { Investment } from '@/lib/types';
 import { useAssetStore } from '@/lib/assetStore';
+import { GOLD_PURITY_FACTORS, GOLD_PURITY_OPTIONS } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -38,6 +39,13 @@ const ASSET_TYPES: Investment['asset_type'][] = [
   'Other',
 ];
 
+const GOLD_KARATS = ['24k', '22k', '18k'] as const;
+const KARAT_LABEL: Record<string, string> = {
+  '24k': '24K — Pure gold / SGB / coins',
+  '22k': '22K — Hallmarked jewellery (91.67%)',
+  '18k': '18K — Jewellery / mixed alloy (75%)',
+};
+
 const EMPTY_FORM: Omit<Investment, 'id'> = {
   asset_name: '',
   asset_type: 'Stock',
@@ -52,8 +60,10 @@ const EMPTY_FORM: Omit<Investment, 'id'> = {
   buy_range: '',
   funded_by_account_id: '',
   funded_by_account_name: '',
+  gold_karat: '24k',
   interest_rate: 0,
   maturity_date: '',
+  gold_purity: '24K',
 };
 
 // Bond current value = principal + simple interest accrued from purchase to today (capped at maturity)
@@ -89,6 +99,7 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
 
   const isWatchlist = form.status === 'watchlist';
   const isBond = form.asset_type === 'Bond';
+  const isGold = form.asset_type === 'Gold';
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -310,21 +321,27 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
             ) : (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="buy_price">Buy Price (₹) *</Label>
+                  <Label htmlFor="buy_price">
+                    {isGold ? 'Metal Rate at Purchase (₹/g) *' : 'Buy Price (₹) *'}
+                  </Label>
                   <Input id="buy_price" type="number" step="0.01" placeholder="0.00"
                     value={form.buy_price || ''}
                     onChange={(e) => setField('buy_price', parseFloat(e.target.value) || 0)} />
                   {errors.buy_price && <p className="text-xs text-red-400">{errors.buy_price}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="current_price">Current Price (₹) *</Label>
+                  <Label htmlFor="current_price">
+                    {isGold ? 'Current Rate (₹/g) *' : 'Current Price (₹) *'}
+                  </Label>
                   <Input id="current_price" type="number" step="0.01" placeholder="0.00"
                     value={form.current_price || ''}
                     onChange={(e) => setField('current_price', parseFloat(e.target.value) || 0)} />
                   {errors.current_price && <p className="text-xs text-red-400">{errors.current_price}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="quantity">Quantity *</Label>
+                  <Label htmlFor="quantity">
+                    {isGold ? 'Weight (grams) *' : 'Quantity *'}
+                  </Label>
                   <Input id="quantity" type="number" step="0.001" placeholder="0"
                     value={form.quantity || ''}
                     onChange={(e) => setField('quantity', parseFloat(e.target.value) || 0)} />
@@ -369,7 +386,10 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
                     <p className="text-xs text-slate-500">
                       Selecting an account will log a debit of{' '}
                       <span className="text-indigo-400 font-medium">
-                        ₹{((form.buy_price || 0) * (form.quantity || 0)).toLocaleString('en-IN')}
+                        ₹{(
+                          (form.buy_price || 0) * (form.quantity || 0)
+                          + (isGold ? (form.making_charges ?? 0) + (form.gold_gst ?? 0) : 0)
+                        ).toLocaleString('en-IN')}
                       </span>
                       {' '}against it.
                     </p>
@@ -438,10 +458,78 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
             )}
 
             {form.asset_type === 'Gold' && (
-              <div className="col-span-2 rounded-md border border-yellow-800/40 bg-yellow-950/20 px-3 py-2 text-xs text-yellow-300">
-                Live 24K gold spot price (₹/gram) will be fetched automatically.
-                Set <strong>Quantity</strong> to the number of grams you hold (1 SGB unit = 1 gram).
-              </div>
+              <>
+                <div className="space-y-1.5">
+                  <Label>Gold Purity *</Label>
+                  <Select
+                    value={form.gold_purity ?? '24K'}
+                    onValueChange={(v) => setField('gold_purity', v as Investment['gold_purity'])}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GOLD_PURITY_OPTIONS.map((k) => (
+                        <SelectItem key={k} value={k}>
+                          {k} ({Math.round(GOLD_PURITY_FACTORS[k] * 1000) / 10}% pure)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                  const metalCost  = Math.round(form.buy_price * form.quantity * 100) / 100;
+                  const making     = form.making_charges ?? 0;
+                  const gst        = form.gold_gst ?? 0;
+                  const totalCost  = metalCost + making + gst;
+                  return (
+                    <div className="col-span-2 rounded-md border border-yellow-800/30 bg-yellow-950/15 px-3 py-2.5 text-xs space-y-1">
+                      <div className="flex justify-between text-slate-400">
+                        <span>Metal cost ({form.quantity}g × ₹{form.buy_price.toLocaleString('en-IN')}/g)</span>
+                        <span>₹{metalCost.toLocaleString('en-IN')}</span>
+                      </div>
+                      {making > 0 && (
+                        <div className="flex justify-between text-slate-400">
+                          <span>Making charges</span>
+                          <span>₹{making.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      {gst > 0 && (
+                        <div className="flex justify-between text-slate-400">
+                          <span>GST</span>
+                          <span>₹{gst.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-semibold text-yellow-300 border-t border-yellow-800/30 pt-1 mt-1">
+                        <span>Total paid</span>
+                        <span>₹{totalCost.toLocaleString('en-IN')}</span>
+                      </div>
+                      {(making > 0 || gst > 0) && (
+                        <p className="text-slate-500 mt-0.5">
+                          Making + GST (₹{(making + gst).toLocaleString('en-IN')}) are sunk costs — not recoverable on resale.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Live price note */}
+                <div className="col-span-2 rounded-md border border-yellow-800/40 bg-yellow-950/20 px-3 py-2 text-xs text-yellow-300">
+                  {form.gold_karat === '24k' || !form.gold_karat
+                    ? 'Live 24K spot price (₹/g) fetched via COMEX + India duty. Enter metal rate above (not total cost).'
+                    : form.gold_karat === '22k'
+                    ? 'Current rate auto-set to 24K spot × 91.67%. Enter the metal rate you paid per gram above.'
+                    : 'Current rate auto-set to 24K spot × 75%. Enter the metal rate you paid per gram above.'}
+=======
+                <div className="col-span-2 rounded-md border border-yellow-800/40 bg-yellow-950/20 px-3 py-2 text-xs text-yellow-300">
+                  Live 24K gold spot price (₹/gram) is fetched automatically and scaled to{' '}
+                  <strong>{form.gold_purity ?? '24K'}</strong> purity
+                  {(form.gold_purity ?? '24K') !== '24K' && (
+                    <> (×{(GOLD_PURITY_FACTORS[form.gold_purity ?? '24K']).toFixed(4)})</>
+                  )}.
+                  Set <strong>Quantity</strong> to the number of grams you hold (1 SGB unit = 1 gram).
+>>>>>>> 5dd0ee2 (Feat: Gold investments, SIP tracker, spent-for expenses, glass theme, and multi-account expenses)
+                </div>
+              </>
             )}
 
             <div className="col-span-2 space-y-1.5">

@@ -11,9 +11,11 @@ import {
   formatCurrency,
   formatPercent,
   getPnlPercent,
+  goldTotalCost,
   computeStats,
   computeCapitalGains,
   formatHoldingPeriod,
+  goldPurityFactor,
   cn,
 } from '@/lib/utils';
 import InvestmentModal from '@/components/InvestmentModal';
@@ -45,6 +47,12 @@ function apiType(assetType: string): 'crypto' | 'stock' | 'mf' | 'gold' {
   if (assetType === 'Mutual Fund') return 'mf';
   return 'stock';
 }
+
+const KARAT_MULTIPLIER: Record<string, number> = {
+  '24k': 1,
+  '22k': 22 / 24,
+  '18k': 18 / 24,
+};
 
 // Bond current value = principal + simple interest accrued (capped at maturity)
 function bondAccruedValue(inv: Investment): number {
@@ -135,8 +143,10 @@ export default function InvestmentsPage() {
     const { prices } = await res.json() as { prices: Record<string, number> };
     targets.forEach((inv) => {
       const key   = type === 'gold' ? 'XAU' : inv.ticker!;
-      const price = prices[key];
+      let price = prices[key];
       if (typeof price === 'number') {
+        // Gold spot is 24K; scale to this holding's purity (18K/22K/24K)
+        if (type === 'gold') price = Math.round(price * goldPurityFactor(inv.gold_purity) * 100) / 100;
         updateInvestment(inv.id, { current_price: price });
         setLiveIds((prev) => new Set(prev).add(inv.id));
       }
@@ -297,7 +307,10 @@ export default function InvestmentsPage() {
     } else {
       addInvestment(data);
       if (data.funded_by_account_id && data.status !== 'watchlist') {
-        const totalCost = Math.round(data.buy_price * data.quantity * 100) / 100;
+        const metalCost = Math.round(data.buy_price * data.quantity * 100) / 100;
+        const totalCost = data.asset_type === 'Gold'
+          ? Math.round((metalCost + (data.making_charges ?? 0) + (data.gold_gst ?? 0)) * 100) / 100
+          : metalCost;
         addTransaction(data.funded_by_account_id, {
           date: data.purchase_date,
           type: 'debit',
@@ -549,7 +562,7 @@ export default function InvestmentsPage() {
                 ) : (
                   filtered.map((inv) => {
                     const pnlPct = getPnlPercent(inv);
-                    const invested = inv.buy_price * inv.quantity;
+                    const invested = goldTotalCost(inv);
                     const value = inv.current_price * inv.quantity;
                     const isLoss = pnlPct < -20;
                     const isGain = pnlPct > 50;
@@ -585,6 +598,11 @@ export default function InvestmentsPage() {
                               {inv.maturity_date && <span className="text-slate-500"> · matures {inv.maturity_date}</span>}
                             </p>
                           )}
+                          {inv.asset_type === 'Gold' && (
+                            <p className="text-[10px] text-yellow-400/80 mt-0.5">
+                              {inv.gold_purity ?? '24K'} · ₹/gram
+                            </p>
+                          )}
                         </TableCell>
                         <TableCell>
                           <span
@@ -597,13 +615,19 @@ export default function InvestmentsPage() {
                           </span>
                         </TableCell>
                         <TableCell className="text-slate-400 text-xs whitespace-nowrap">{inv.sector}</TableCell>
-                        <TableCell className="text-right text-slate-300">{formatCurrency(inv.buy_price)}</TableCell>
+                        <TableCell className="text-right">
+                          <span className="text-slate-300">{formatCurrency(inv.buy_price)}</span>
+                          {inv.asset_type === 'Gold' && <span className="block text-[10px] text-slate-500">/gram</span>}
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             {liveIds.has(inv.id) && (
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" title="Live price from CoinGecko" />
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" title="Live price" />
                             )}
-                            <span className="text-slate-300">{formatCurrency(inv.current_price)}</span>
+                            <div>
+                              <span className="text-slate-300">{formatCurrency(inv.current_price)}</span>
+                              {inv.asset_type === 'Gold' && <span className="block text-[10px] text-slate-500">/gram</span>}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="text-right text-slate-400">{inv.quantity}</TableCell>

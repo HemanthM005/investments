@@ -93,7 +93,7 @@ interface InvestmentStore {
   investments: Investment[];
   hydrated: boolean;
   hydrate: () => Promise<void>;
-  addInvestment: (investment: Omit<Investment, 'id'>) => void;
+  addInvestment: (investment: Omit<Investment, 'id'>) => string;  // returns new investment id
   updateInvestment: (id: string, investment: Partial<Investment>) => void;
   deleteInvestment: (id: string) => void;
   sellInvestment: (id: string, saleData: Pick<Investment, 'sold_price' | 'sold_date' | 'sale_charges' | 'credited_to_account_id' | 'credited_to_account_name'>) => void;
@@ -142,12 +142,11 @@ export const useInvestmentStore = create<InvestmentStore>()((set, get) => ({
   },
 
   addInvestment: (investment) => {
-    const updated = [
-      ...get().investments,
-      { ...investment, id: crypto.randomUUID() },
-    ];
+    const id = crypto.randomUUID();
+    const updated = [...get().investments, { ...investment, id }];
     set({ investments: updated });
     saveToFile(updated);
+    return id;
   },
 
   updateInvestment: (id, investment) => {

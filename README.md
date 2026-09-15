@@ -75,17 +75,17 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Data Storage
 
-All data is stored in `data/portfolio.json` (gitignored — never committed). Sections:
+All data is stored locally under `data/` (gitignored — never committed), split across three files:
 
-| Section | Contents |
-|---------|----------|
-| `investments` | Your investment holdings |
-| `expenses` | Daily expense entries |
-| `money_records` | Lent/borrowed records |
-| `accounts` | Cash & account balances |
-| `recurring_expenses` | Subscription entries |
+| File | Contents |
+|------|----------|
+| `data/portfolio.json` | `investments`, `accounts`, `expenses`, `recurring`, `money_records`, `audit_log` |
+| `data/daily-tracker.json` | `habits`, `habit_logs` |
+| `data/daily-planner.json` | `items`, `planner_logs` |
 
-To reset data, delete `data/portfolio.json` — it will be recreated from `data/portfolio.example.json` on next load.
+On first run each file falls back to its `*.example.json` sibling. To reset a domain, delete its private file and reload — the example seed will be recreated.
+
+📘 **For the exact JSON structure of every entity** (Stock / ETF / Bond / Crypto / watchlist / sold investments, accounts, transfers, expenses with splits, money records, habits, planner items, and more), see **[`docs/data-formats.md`](docs/data-formats.md)** — one worked example per shape.
 
 ## Risk Indicators
 
