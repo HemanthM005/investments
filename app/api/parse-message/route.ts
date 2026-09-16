@@ -12,6 +12,17 @@ interface ParsedMessage {
   confidence: number; // 0-1, how confident the parser is
 }
 
+/**
+ * Models sometimes wrap JSON in ```json fences or add a sentence around it.
+ * Pull out the outermost {...} so those responses still parse.
+ */
+function extractJson(text: string): string {
+  const trimmed = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  return start !== -1 && end > start ? trimmed.slice(start, end + 1) : trimmed;
+}
+
 export async function POST(req: Request) {
   try {
     const { message_text } = await req.json();
@@ -63,8 +74,14 @@ Return ONLY the JSON object, no markdown or extra text.`;
             content: prompt,
           },
         ],
-        max_tokens: 500,
-        temperature: 0.3,
+        // gpt-oss is a reasoning model and its reasoning tokens are charged
+        // against this budget. At 500 a long bank SMS spent the allowance on
+        // reasoning and the JSON came back truncated mid-key.
+        max_tokens: 3000,
+        reasoning_effort: 'low',
+        // Ask the server to guarantee syntactically valid JSON.
+        response_format: { type: 'json_object' },
+        temperature: 0.1,
       }),
     });
 
@@ -75,11 +92,19 @@ Return ONLY the JSON object, no markdown or extra text.`;
     }
 
     const data = await response.json();
-    const responseText = data.choices[0].message.content;
+    const choice = data.choices?.[0];
+    const responseText: string = choice?.message?.content ?? '';
+
+    if (choice?.finish_reason === 'length') {
+      return Response.json(
+        { error: 'Response was cut off before the JSON finished. Try a shorter message.', raw: responseText },
+        { status: 502 }
+      );
+    }
 
     let parsed: ParsedMessage;
     try {
-      parsed = JSON.parse(responseText);
+      parsed = JSON.parse(extractJson(responseText));
     } catch {
       return Response.json(
         { error: 'Failed to parse LLM response', raw: responseText },

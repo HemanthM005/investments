@@ -1,4 +1,8 @@
 import { create } from 'zustand';
+import { useExpenseStore } from './expenseStore';
+import { useMoneyStore } from './moneyStore';
+import { useRecurringStore } from './recurringStore';
+import type { ExpenseCategory } from './types';
 
 export interface ParsedMessage {
   id: string;
@@ -33,6 +37,36 @@ interface MessageParserState {
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+}
+
+const CATEGORY_ALIASES: Record<string, ExpenseCategory> = {
+  food: 'Food & Dining', dining: 'Food & Dining', restaurant: 'Food & Dining',
+  grocery: 'Groceries', groceries: 'Groceries',
+  travel: 'Transport & Travel', transport: 'Transport & Travel', fuel: 'Transport & Travel',
+  shopping: 'Shopping', entertainment: 'Entertainment',
+  health: 'Health & Medical', healthcare: 'Health & Medical', medical: 'Health & Medical',
+  bills: 'Bills & Utilities', utilities: 'Bills & Utilities',
+  education: 'Education', rent: 'Rent', subscription: 'Subscriptions',
+  subscriptions: 'Subscriptions', fitness: 'Sports & Fitness', loan: 'Loan & EMI',
+  emi: 'Loan & EMI', gifts: 'Gifts & Donations',
+};
+
+/**
+ * The model returns loose labels ("Food", "Bills") but Expense.category is a
+ * fixed union ("Food & Dining"). Map what we recognise, fall back to Other.
+ */
+function toExpenseCategory(raw?: string | null): ExpenseCategory {
+  if (!raw) return 'Other';
+  const key = raw.trim().toLowerCase();
+  return CATEGORY_ALIASES[key] ?? CATEGORY_ALIASES[key.split(/[ &/]/)[0]] ?? 'Other';
+}
+
+/**
+ * Money in means someone paid you (you owe nothing — record it as borrowed
+ * only when the text says so). Debits default to lent.
+ */
+function inferDirection(text: string): 'lent' | 'borrowed' {
+  return /\b(credited|received|from)\b/i.test(text) ? 'borrowed' : 'lent';
 }
 
 export const useMessageParserStore = create<MessageParserState>((set, get) => ({
@@ -78,57 +112,63 @@ export const useMessageParserStore = create<MessageParserState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // Import based on type
-      if (msg.type === 'expense') {
-        // POST to expense API
-        const res = await fetch('/api/data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            section: 'expenses',
-            action: 'add',
-            data: {
-              date: msg.date,
-              amount: msg.amount,
-              category: msg.category || 'Other',
-              payment_source_name: msg.account_name || 'Unknown',
-              payment_source_id: '', // Will be set by user later
-              description: msg.description,
-              notes: `Auto-parsed from: ${msg.raw_text}`,
-            },
-          }),
-        });
+      const notes = `Auto-parsed from: ${msg.raw_text}`;
 
-        if (!res.ok) throw new Error('Failed to import expense');
-      } else if (msg.type === 'payment' || msg.type === 'transfer') {
-        // POST to money tracker (lent/borrowed)
-        const res = await fetch('/api/data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            section: 'money_records',
-            action: 'add',
-            data: {
-              type: 'lent', // or 'borrowed' based on context
-              person_name: msg.person_name || 'Unknown',
-              amount: msg.amount,
-              settled_amount: 0,
-              date: msg.date,
-              due_date: msg.date,
-              description: msg.description,
-              status: 'pending',
-            },
-          }),
-        });
+      switch (msg.type) {
+        case 'expense': {
+          useExpenseStore.getState().addExpense({
+            date: msg.date,
+            amount: msg.amount,
+            category: toExpenseCategory(msg.category),
+            payment_source_id: '',
+            payment_source_name: msg.account_name || 'Unknown',
+            description: msg.description,
+            notes,
+          });
+          break;
+        }
 
-        if (!res.ok) throw new Error('Failed to import payment record');
+        case 'subscription': {
+          useRecurringStore.getState().addRecurring({
+            name: msg.description || msg.account_name || 'Subscription',
+            amount: msg.amount,
+            frequency: 'Monthly',
+            category: 'Subscriptions',
+            payment_source_id: '',
+            payment_source_name: msg.account_name || 'Unknown',
+            next_due: msg.date,
+            start_date: msg.date,
+            active: true,
+            notes,
+          });
+          break;
+        }
+
+        case 'payment':
+        case 'transfer': {
+          useMoneyStore.getState().addRecord({
+            type: inferDirection(msg.raw_text),
+            person_name: msg.person_name || 'Unknown',
+            amount: msg.amount,
+            settled_amount: 0,
+            date: msg.date,
+            due_date: msg.date,
+            description: msg.description,
+            status: 'pending',
+          });
+          break;
+        }
+
+        default:
+          // 'income' and 'unknown' have no destination section yet. Say so
+          // rather than marking the message imported and dropping it.
+          set({ error: `No destination for type "${msg.type}" — add it manually.` });
+          return;
       }
 
       get().updateMessage(id, { status: 'imported' });
     } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : 'Import failed',
-      });
+      set({ error: err instanceof Error ? err.message : 'Import failed' });
     } finally {
       set({ loading: false });
     }
