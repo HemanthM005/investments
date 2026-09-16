@@ -16,12 +16,22 @@ import {
 } from '@/components/ui/select';
 import { Trash2, Check, X, Upload, MessageSquare, Zap } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
+import ConfirmDialog from '@/components/ConfirmDialog';
+
+
+const SECTION_LABEL: Record<string, string> = {
+  expenses: 'Daily Expenses',
+  money_records: 'Money Tracker',
+  recurring: 'Subscriptions',
+};
 
 export default function MessageParserPage() {
   const store = useMessageParserStore();
   const [testMessage, setTestMessage] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [parsing, setParsing] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<ParsedMessage | null>(null);
+  const [alsoDeleteRecord, setAlsoDeleteRecord] = useState(true);
 
   const filteredMessages =
     filterStatus === 'all'
@@ -143,12 +153,49 @@ export default function MessageParserPage() {
               onApprove={() => store.approveMessage(msg.id)}
               onReject={() => store.rejectMessage(msg.id)}
               onImport={() => handleImport(msg.id)}
-              onDelete={() => store.deleteMessage(msg.id)}
+              onDelete={() => { setAlsoDeleteRecord(true); setPendingDelete(msg); }}
               loading={store.loading}
             />
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(o) => !o && setPendingDelete(null)}
+        title="Delete this parsed message?"
+        description={
+          pendingDelete?.imported_id ? (
+            <>
+              This message was imported into{' '}
+              <span className="font-medium text-slate-200">
+                {SECTION_LABEL[pendingDelete.imported_section ?? ''] ?? 'another section'}
+              </span>
+              . Deleting the message here does not remove that record unless you say so.
+            </>
+          ) : (
+            'This removes the parsed message. Nothing else is affected.'
+          )
+        }
+        confirmLabel="Delete"
+        onConfirm={() => pendingDelete && store.deleteMessage(pendingDelete.id, alsoDeleteRecord)}
+      >
+        {pendingDelete?.imported_id && (
+          <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[#2a2d3e] bg-[#0f1117] p-3 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              checked={alsoDeleteRecord}
+              onChange={(e) => setAlsoDeleteRecord(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-red-500"
+            />
+            <span>
+              Also delete the{' '}
+              {pendingDelete.amount ? formatCurrency(pendingDelete.amount) : ''} record it created in{' '}
+              {SECTION_LABEL[pendingDelete.imported_section ?? ''] ?? 'that section'}
+            </span>
+          </label>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }
