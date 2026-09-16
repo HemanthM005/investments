@@ -114,6 +114,12 @@ export async function POST(req: Request) {
       const { sections, action } = body;
       const changed: string[] = [];
       for (const [sec, data] of Object.entries(sections)) {
+        if (!Array.isArray(data)) {
+          return NextResponse.json(
+            { ok: false, error: `Section "${sec}" must be an array, got ${typeof data}. Refusing to overwrite.` },
+            { status: 400 }
+          );
+        }
         if (sec in EMPTY && sec !== 'audit_log') {
           const existing = (file as Record<string, unknown>)[sec] as unknown[];
           (file as Record<string, unknown>)[sec] = MERGE_SECTIONS.has(sec)
@@ -132,6 +138,15 @@ export async function POST(req: Request) {
       const { section, data, action } = body;
       if (!(section in EMPTY) || section === 'audit_log') {
         return NextResponse.json({ ok: false, error: 'Unknown section' }, { status: 400 });
+      }
+      // A section write REPLACES the whole array. A caller sending a single
+      // object would wipe the section, which is exactly how the message
+      // parser destroyed 294 expenses. Refuse anything that is not an array.
+      if (!Array.isArray(data)) {
+        return NextResponse.json(
+          { ok: false, error: `Section "${section}" must be an array, got ${typeof data}. Refusing to overwrite.` },
+          { status: 400 }
+        );
       }
       const existing = (file as Record<string, unknown>)[section] as unknown[];
       (file as Record<string, unknown>)[section] = MERGE_SECTIONS.has(section)
