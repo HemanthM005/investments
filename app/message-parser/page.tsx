@@ -6,6 +6,7 @@ import {
   type ParsedMessage, type Destination, type ImportOptions,
 } from '@/lib/messageParserStore';
 import { useAssetStore } from '@/lib/assetStore';
+import { matchAccount } from '@/lib/matchAccount';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -237,8 +238,22 @@ function ParsedMessageCard({
   const [dest, setDest] = useState<Destination | null>(
     () => defaultDestination(message.type, message.raw_text)
   );
+  // Pre-fill both accounts from what the message said. Whatever cannot be
+  // matched confidently is left blank rather than guessed, and everything
+  // stays editable.
   const [fromId, setFromId] = useState('');
   const [toId, setToId] = useState('');
+  const [autoFilled, setAutoFilled] = useState<{ from: boolean; to: boolean }>({ from: false, to: false });
+
+  useEffect(() => {
+    if (!accounts.length || !dest || !NEEDS_ACCOUNTS.has(dest)) return;
+    const card = dest === 'card_payment';
+    const from = matchAccount(message.from_account ?? (card ? null : message.account_name), accounts, { prefer: 'funding' });
+    const to = matchAccount(message.to_account ?? (card ? message.account_name : null), accounts, { prefer: card ? 'card' : 'funding' });
+    setFromId((cur) => cur || from || '');
+    setToId((cur) => cur || to || '');
+    setAutoFilled({ from: Boolean(from), to: Boolean(to) });
+  }, [accounts, dest, message.from_account, message.to_account, message.account_name]);
 
   const statusColors: Record<string, string> = {
     pending: 'bg-amber-950/30 border-amber-700/40 text-amber-300',
@@ -344,7 +359,9 @@ function ParsedMessageCard({
             {dest && NEEDS_ACCOUNTS.has(dest) && (
               <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
                 <div>
-                  <label className="block pb-1 text-[11px] text-slate-500">Money leaves</label>
+                  <label className="block pb-1 text-[11px] text-slate-500">
+                    Money leaves {autoFilled.from && fromId && <span className="text-emerald-500">· auto-filled</span>}
+                  </label>
                   <select
                     value={fromId}
                     onChange={(e) => setFromId(e.target.value)}
@@ -357,6 +374,7 @@ function ParsedMessageCard({
                 <div>
                   <label className="block pb-1 text-[11px] text-slate-500">
                     {dest === 'card_payment' ? 'Card being paid' : 'Money arrives'}
+                    {autoFilled.to && toId && <span className="text-emerald-500"> · auto-filled</span>}
                   </label>
                   <select
                     value={toId}
@@ -367,10 +385,14 @@ function ParsedMessageCard({
                     {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                 </div>
-                {(message.from_account || message.to_account) && (
+                {(!fromId || !toId) && (message.from_account || message.to_account || message.account_name) && (
                   <p className="text-[11px] text-slate-600 sm:col-span-2">
                     Message mentioned{message.from_account ? ` from "${message.from_account}"` : ''}
                     {message.to_account ? ` to "${message.to_account}"` : ''}
+                    {!message.from_account && !message.to_account && message.account_name
+                      ? ` "${message.account_name}"`
+                      : ''}
+                    {' '}— pick the matching account above.
                   </p>
                 )}
               </div>
