@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { readStore, writeStore } from '@/lib/storage';
 
 const DEMO = process.env.DEMO_MODE === 'true';
-const FILE = path.join(process.cwd(), 'data', DEMO ? 'daily-tracker.example.json' : 'daily-tracker.json');
-const BAK  = FILE + '.bak';
+const FILE = DEMO ? 'daily-tracker.example.json' : 'daily-tracker.json';
 
 type TrackerData = {
   habits: unknown[];
@@ -13,32 +11,19 @@ type TrackerData = {
 
 const EMPTY: TrackerData = { habits: [], habit_logs: [] };
 
-function readFile(): TrackerData {
-  try {
-    if (!fs.existsSync(FILE)) return { ...EMPTY };
-    return { ...EMPTY, ...JSON.parse(fs.readFileSync(FILE, 'utf-8')) };
-  } catch {
-    return { ...EMPTY };
-  }
+async function readFile(): Promise<TrackerData> {
+  return { ...EMPTY, ...(await readStore<Partial<TrackerData>>(FILE, {})) };
 }
 
-// Atomic write: one backup (.bak), then rename-swap.
-function writeFile(data: TrackerData) {
-  const dir = path.dirname(FILE);
-  fs.mkdirSync(dir, { recursive: true });
-
-  if (fs.existsSync(FILE)) fs.copyFileSync(FILE, BAK);
-
-  const tmp = FILE + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tmp, FILE);
+async function writeFile(data: TrackerData) {
+  await writeStore(FILE, data);
 }
 
 // GET /api/habits?section=habits|habit_logs  →  { data: [...] }
 // GET /api/habits                            →  full { habits, habit_logs }
 export async function GET(req: Request) {
   const section = new URL(req.url).searchParams.get('section') as keyof TrackerData | null;
-  const file = readFile();
+  const file = await readFile();
   if (section && section in file) return NextResponse.json({ data: file[section] });
   return NextResponse.json(file);
 }
@@ -51,7 +36,7 @@ export async function POST(req: Request) {
       | { section: keyof TrackerData; data: unknown[] }
       | { sections: Partial<TrackerData> };
 
-    const file = readFile();
+    const file = await readFile();
 
     if ('sections' in body) {
       for (const [sec, data] of Object.entries(body.sections)) {
@@ -63,7 +48,7 @@ export async function POST(req: Request) {
       (file as Record<string, unknown>)[section] = data ?? [];
     }
 
-    if (!DEMO) writeFile(file);
+    if (!DEMO) await writeFile(file);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });

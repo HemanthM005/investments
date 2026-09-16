@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { readStore, writeStore } from '@/lib/storage';
 
 const DEMO = process.env.DEMO_MODE === 'true';
-const DATA_DIR = path.join(process.cwd(), 'data');
-const FILE = path.join(DATA_DIR, DEMO ? 'daily-planner.example.json' : 'daily-planner.json');
-const EXAMPLE = path.join(DATA_DIR, 'daily-planner.example.json');
-const BAK = FILE + '.bak';
+const FILE = DEMO ? 'daily-planner.example.json' : 'daily-planner.json';
+const EXAMPLE = 'daily-planner.example.json';
 
 type PlannerData = {
   items: unknown[];
@@ -15,31 +12,22 @@ type PlannerData = {
 
 const EMPTY: PlannerData = { items: [], planner_logs: [] };
 
-function readFile(): PlannerData {
-  try {
-    // If real file doesn't exist, fall back to example
-    const src = fs.existsSync(FILE) ? FILE : EXAMPLE;
-    if (!fs.existsSync(src)) return { ...EMPTY };
-    return { ...EMPTY, ...JSON.parse(fs.readFileSync(src, 'utf-8')) };
-  } catch {
-    return { ...EMPTY };
-  }
+async function readFile(): Promise<PlannerData> {
+  const data = await readStore<Partial<PlannerData> | null>(FILE, null);
+  // Fall back to the example when the real document does not exist yet
+  if (data) return { ...EMPTY, ...data };
+  return { ...EMPTY, ...(await readStore<Partial<PlannerData>>(EXAMPLE, {})) };
 }
 
-// Atomic write: one backup (.bak), then rename-swap.
-function writeFile(data: PlannerData) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (fs.existsSync(FILE)) fs.copyFileSync(FILE, BAK);
-  const tmp = FILE + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tmp, FILE);
+async function writeFile(data: PlannerData) {
+  await writeStore(FILE, data);
 }
 
 // GET /api/planner?section=items|planner_logs  →  { data: [...] }
 // GET /api/planner                             →  full { items, planner_logs }
 export async function GET(req: Request) {
   const section = new URL(req.url).searchParams.get('section') as keyof PlannerData | null;
-  const file = readFile();
+  const file = await readFile();
   if (section && section in file) return NextResponse.json({ data: file[section] });
   return NextResponse.json(file);
 }
@@ -54,7 +42,7 @@ export async function POST(req: Request) {
 
     if (DEMO) return NextResponse.json({ ok: true });
 
-    const file = readFile();
+    const file = await readFile();
 
     if ('sections' in body) {
       for (const [sec, data] of Object.entries(body.sections)) {
