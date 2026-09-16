@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   TrendingUp, BarChart2, FileText, Landmark, HandCoins, PiggyBank, Receipt,
   RefreshCw, GitCompare, Flame, CalendarCheck, Activity, Heart, Sparkles,
-  Repeat, Zap, Menu, X, LogOut, User,
+  Repeat, Zap, Menu, X, LogOut, User, Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/appStore';
@@ -66,12 +66,15 @@ const navGroups = [
 
 const allLinks = navGroups.flatMap((g) => g.links);
 
+// Shown only to the owner — see /api/admin/users
+const OWNER_LINK = { href: '/users', label: 'Users', icon: Users };
+
 export default function Navbar() {
   const pathname = usePathname();
   const theme = useAppStore((s) => s.theme);
   const setTheme = useAppStore((s) => s.setTheme);
   const [open, setOpen] = useState(false);
-  const [me, setMe] = useState<{ user: string | null; authEnabled: boolean } | null>(null);
+  const [me, setMe] = useState<{ user: string | null; authEnabled: boolean; isOwner?: boolean } | null>(null);
 
   useEffect(() => {
     fetch('/api/me')
@@ -172,7 +175,7 @@ export default function Navbar() {
               <div className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
                 {title}
               </div>
-              {links.map(({ href, label, icon: Icon }) => {
+              {(title === 'Tools' && me?.isOwner ? [...links, OWNER_LINK] : links).map(({ href, label, icon: Icon }) => {
                 const isActive = pathname === href;
                 return (
                   <Link
