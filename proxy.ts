@@ -3,7 +3,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { SESSION_COOKIE, USER_HEADER, userFromCookie, authEnabled } from '@/lib/auth';
 
-const PUBLIC_PATHS = ['/login', '/api/login'];
+const PUBLIC_PATHS = ['/login', '/api/login', '/register', '/api/register'];
 
 export async function proxy(request: NextRequest) {
   // Never let a client supply its own identity header.

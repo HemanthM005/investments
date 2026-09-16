@@ -7,7 +7,7 @@ import SaveErrorBanner from './SaveErrorBanner';
 
 // Routes rendered without the app chrome. /login must not mount
 // HydrationProvider — every request would 401 behind the password gate.
-const BARE_ROUTES = ['/login'];
+const BARE_ROUTES = ['/login', '/register'];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

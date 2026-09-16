@@ -13,6 +13,7 @@
 // this runs unchanged in proxy.ts, which may execute on the Edge runtime.
 
 import { verifyPassword, isHashed } from './password';
+import { loadUsers, findUser } from './userStore';
 
 export const SESSION_COOKIE = 'ip_session';
 /** Set by proxy.ts from the verified cookie; routes read the user from here. */
@@ -60,7 +61,19 @@ export function primaryUser(): string | null {
 }
 
 export function authEnabled(): boolean {
-  return appUsers().length > 0;
+  // Registration is only reachable behind a code, and the gate must stay on
+  // whenever any credential source exists.
+  return appUsers().length > 0 || Boolean(process.env.REGISTER_CODE);
+}
+
+/** Registration is off unless an invite code is configured. */
+export function registrationEnabled(): boolean {
+  return Boolean(process.env.REGISTER_CODE);
+}
+
+export function minPasswordLength(): number {
+  const n = Number(process.env.MIN_PASSWORD_LENGTH);
+  return Number.isFinite(n) && n >= 4 ? n : 6;
 }
 
 function bytesToHex(buf: ArrayBuffer): string {
@@ -102,8 +115,9 @@ export async function userFromCookie(cookieValue: string | undefined): Promise<s
   if (dot < 1) return null;
   const user = cookieValue.slice(0, dot);
   if (!VALID_USER.test(user)) return null;
-  // Only trust a name that is still a configured user
-  if (!appUsers().some((u) => u.name === user)) return null;
+  // Only trust a name that still exists (env-declared or registered)
+  const known = await allUsers();
+  if (!known.some((u) => u.name === user)) return null;
   try {
     return safeEqual(cookieValue, await sessionToken(user)) ? user : null;
   } catch {
@@ -121,13 +135,23 @@ export async function userFromCookie(cookieValue: string | undefined): Promise<s
  * Always walks the full list and always runs a comparison so the work does
  * not reveal whether the username existed.
  */
+/** Env-declared users plus anyone who registered. Env wins on a name clash. */
+export async function allUsers(): Promise<AppUser[]> {
+  const env = appUsers();
+  const envNames = new Set(env.map((u) => u.name));
+  const registered = (await loadUsers())
+    .filter((u) => !envNames.has(u.name))
+    .map((u) => ({ name: u.name, password: u.password }));
+  return [...env, ...registered];
+}
+
 export async function verifyCredentials(
   username: string,
   password: string
 ): Promise<AppUser | null> {
   const wanted = username.trim().toLowerCase();
   let found: AppUser | null = null;
-  for (const u of appUsers()) {
+  for (const u of await allUsers()) {
     // Always verify, even when the name does not match, so the time taken
     // does not reveal whether the username exists.
     const passOk = await verifyPassword(password, u.password);
@@ -135,6 +159,15 @@ export async function verifyCredentials(
   }
   return found;
 }
+
+/** A name is taken if it is declared in env or already registered. */
+export async function isNameTaken(name: string): Promise<boolean> {
+  const wanted = name.trim().toLowerCase();
+  if (appUsers().some((u) => u.name === wanted)) return true;
+  return (await findUser(wanted)) !== null;
+}
+
+export const USERNAME_RE = VALID_USER;
 
 /** True when any configured user still has a plaintext password. */
 export function hasPlaintextPasswords(): boolean {

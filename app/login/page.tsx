@@ -81,6 +81,11 @@ function LoginForm() {
         {busy && <Loader2 className="h-4 w-4 animate-spin" />}
         {busy ? 'Checking…' : 'Unlock'}
       </button>
+
+      <p className="text-center text-xs text-slate-500">
+        Need an account?{' '}
+        <a href="/register" className="text-indigo-400 hover:text-indigo-300">Register</a>
+      </p>
     </form>
   );
 }
