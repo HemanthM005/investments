@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
-  SESSION_COOKIE, sessionToken, registrationEnabled, isNameTaken,
+  SESSION_COOKIE, sessionToken, registrationEnabled, registerCode, isNameTaken,
   USERNAME_RE, minPasswordLength, safeEqual,
 } from '@/lib/auth';
 import { addUser } from '@/lib/userStore';
@@ -11,7 +11,11 @@ const ONE_YEAR = 60 * 60 * 24 * 365;
 
 export async function GET() {
   // Lets the page show or hide itself without exposing anything else.
-  return NextResponse.json({ enabled: registrationEnabled(), minLength: minPasswordLength() });
+  return NextResponse.json({
+    enabled: registrationEnabled(),
+    requiresCode: registerCode() !== null,
+    minLength: minPasswordLength(),
+  });
 }
 
 export async function POST(req: Request) {
@@ -37,7 +41,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Bad request' }, { status: 400 });
   }
 
-  if (!safeEqual(code, process.env.REGISTER_CODE!)) {
+  const expectedCode = registerCode();
+  if (expectedCode !== null && !safeEqual(String(code).trim(), expectedCode)) {
     recordFailure(key);
     await new Promise((r) => setTimeout(r, 400));
     return NextResponse.json({ ok: false, error: 'Invalid invite code' }, { status: 401 });
