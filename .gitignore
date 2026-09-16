@@ -42,3 +42,4 @@ tsconfig.tsbuildinfo
 .claude/scheduled_tasks.lock
 .claude/*.lock
 .vercel
+.env*

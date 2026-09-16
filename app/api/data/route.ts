@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { readStore, writeStore } from '@/lib/storage';
 
 const DEMO = process.env.DEMO_MODE === 'true';
-const FILE = path.join(process.cwd(), 'data', DEMO ? 'portfolio.example.json' : 'portfolio.json');
+const FILE = DEMO ? 'portfolio.example.json' : 'portfolio.json';
 const MAX_AUDIT = 500; // keep last 500 audit entries
 
 type AuditEntry = {
@@ -33,38 +32,18 @@ const EMPTY: PortfolioData = {
   audit_log: [],
 };
 
-function readFile(): PortfolioData {
-  try {
-    if (!fs.existsSync(FILE)) return { ...EMPTY };
-    const parsed = JSON.parse(fs.readFileSync(FILE, 'utf-8'));
-    // Only pick known keys so stale/migrated sections are silently dropped on next write
-    const result = { ...EMPTY };
-    for (const key of Object.keys(EMPTY) as (keyof PortfolioData)[]) {
-      if (key in parsed) (result as Record<string, unknown>)[key] = parsed[key];
-    }
-    return result;
-  } catch {
-    return { ...EMPTY };
+async function readFile(): Promise<PortfolioData> {
+  const parsed = await readStore<Record<string, unknown>>(FILE, { ...EMPTY });
+  // Only pick known keys so stale/migrated sections are silently dropped on next write
+  const result = { ...EMPTY };
+  for (const key of Object.keys(EMPTY) as (keyof PortfolioData)[]) {
+    if (key in parsed) (result as Record<string, unknown>)[key] = parsed[key];
   }
+  return result;
 }
 
-// Atomic write: write to .tmp then rename (POSIX rename is atomic — either
-// the old file or the new file exists, never a half-written state).
-// Also rotates up to 3 backups before each write so you can always recover.
-function writeFile(data: PortfolioData) {
-  const dir = path.dirname(FILE);
-  fs.mkdirSync(dir, { recursive: true });
-
-  // Rotate backups: .bak1 → .bak2 → .bak3
-  const bak = (n: number) => `${FILE}.bak${n}`;
-  if (fs.existsSync(bak(2))) fs.renameSync(bak(2), bak(3));
-  if (fs.existsSync(bak(1))) fs.renameSync(bak(1), bak(2));
-  if (fs.existsSync(FILE))   fs.copyFileSync(FILE, bak(1));
-
-  // Atomic write via temp file
-  const tmp = FILE + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tmp, FILE); // atomic on POSIX/macOS
+async function writeFile(data: PortfolioData) {
+  await writeStore(FILE, data);
 }
 
 function appendAudit(file: PortfolioData, entry: AuditEntry) {
@@ -113,7 +92,7 @@ function mergeById(existing: unknown[], incoming: unknown[]): unknown[] {
 // ── GET /api/data?section=audit_log   → { data: [...] }
 export async function GET(req: Request) {
   const section = new URL(req.url).searchParams.get('section') as keyof PortfolioData | null;
-  const file = readFile();
+  const file = await readFile();
   if (section && section in file) return NextResponse.json({ data: file[section] });
   return NextResponse.json(file);
 }
@@ -128,7 +107,7 @@ export async function POST(req: Request) {
       | { section: keyof PortfolioData; data: unknown[]; action?: string }
       | { sections: Partial<Record<keyof PortfolioData, unknown[]>>; action?: string };
 
-    const file = readFile();
+    const file = await readFile();
 
     if ('sections' in body) {
       // Multi-section atomic update
@@ -166,7 +145,7 @@ export async function POST(req: Request) {
       });
     }
 
-    if (!DEMO) writeFile(file);
+    if (!DEMO) await writeFile(file);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });
