@@ -1,11 +1,23 @@
 import { NextResponse } from 'next/server';
 import { SESSION_COOKIE, sessionToken, safeEqual, authEnabled } from '@/lib/auth';
+import { clientKey, retryAfterMs, recordFailure, recordSuccess } from '@/lib/loginLimit';
 
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 export async function POST(req: Request) {
   if (!authEnabled()) {
     return NextResponse.json({ ok: false, error: 'Auth is not configured' }, { status: 400 });
+  }
+
+  // Throttle before doing any work — a short PIN is only safe if guessing is slow
+  const key = clientKey(req);
+  const wait = retryAfterMs(key);
+  if (wait > 0) {
+    const seconds = Math.ceil(wait / 1000);
+    return NextResponse.json(
+      { ok: false, error: `Too many attempts. Try again in ${seconds}s.` },
+      { status: 429, headers: { 'Retry-After': String(seconds) } }
+    );
   }
 
   let password = '';
@@ -16,11 +28,13 @@ export async function POST(req: Request) {
   }
 
   if (typeof password !== 'string' || !safeEqual(password, process.env.APP_PASSWORD!)) {
+    recordFailure(key);
     // Deliberately vague, and slowed slightly to blunt brute-force attempts.
     await new Promise((r) => setTimeout(r, 400));
     return NextResponse.json({ ok: false, error: 'Incorrect password' }, { status: 401 });
   }
 
+  recordSuccess(key);
   const res = NextResponse.json({ ok: true });
   res.cookies.set(SESSION_COOKIE, await sessionToken(), {
     httpOnly: true,
