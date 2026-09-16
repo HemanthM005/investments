@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   TrendingUp, BarChart2, FileText, Landmark, HandCoins, PiggyBank, Receipt,
   RefreshCw, GitCompare, Flame, CalendarCheck, Activity, Heart, Sparkles,
-  Repeat, Zap, Menu, X,
+  Repeat, Zap, Menu, X, LogOut, User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/appStore';
@@ -71,6 +71,14 @@ export default function Navbar() {
   const theme = useAppStore((s) => s.theme);
   const setTheme = useAppStore((s) => s.setTheme);
   const [open, setOpen] = useState(false);
+  const [me, setMe] = useState<{ user: string | null; authEnabled: boolean } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/me')
+      .then((r) => r.json())
+      .then(setMe)
+      .catch(() => {});
+  }, []);
 
   // Close the drawer on navigation
   useEffect(() => setOpen(false), [pathname]);
@@ -186,8 +194,24 @@ export default function Navbar() {
           ))}
         </div>
 
-        <div className="hidden flex-shrink-0 border-t border-[#2a2d3e] p-3 lg:block">
-          {themeToggle}
+        <div className="flex-shrink-0 border-t border-[#2a2d3e] p-3">
+          {me?.user && (
+            <div className="mb-2 flex items-center gap-2 rounded-lg bg-[#0f1117] px-2.5 py-2">
+              <User className="h-3.5 w-3.5 flex-shrink-0 text-slate-500" />
+              <span className="truncate text-xs font-medium capitalize text-slate-300">{me.user}</span>
+              <button
+                onClick={async () => {
+                  await fetch('/api/login', { method: 'DELETE' });
+                  window.location.href = '/login';
+                }}
+                title="Sign out"
+                className="ml-auto rounded p-1 text-slate-500 transition-colors hover:bg-[#1a1d2e] hover:text-red-400"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+          <div className="hidden lg:block">{themeToggle}</div>
         </div>
       </nav>
     </>

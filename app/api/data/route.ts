@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { readStore, writeStore } from '@/lib/storage';
+import { USER_HEADER } from '@/lib/auth';
 
 const DEMO = process.env.DEMO_MODE === 'true';
 const FILE = DEMO ? 'portfolio.example.json' : 'portfolio.json';
@@ -32,8 +33,8 @@ const EMPTY: PortfolioData = {
   audit_log: [],
 };
 
-async function readFile(): Promise<PortfolioData> {
-  const parsed = await readStore<Record<string, unknown>>(FILE, { ...EMPTY });
+async function readFile(user: string | null): Promise<PortfolioData> {
+  const parsed = await readStore<Record<string, unknown>>(FILE, { ...EMPTY }, user);
   // Only pick known keys so stale/migrated sections are silently dropped on next write
   const result = { ...EMPTY };
   for (const key of Object.keys(EMPTY) as (keyof PortfolioData)[]) {
@@ -42,8 +43,8 @@ async function readFile(): Promise<PortfolioData> {
   return result;
 }
 
-async function writeFile(data: PortfolioData) {
-  await writeStore(FILE, data);
+async function writeFile(data: PortfolioData, user: string | null) {
+  await writeStore(FILE, data, user);
 }
 
 function appendAudit(file: PortfolioData, entry: AuditEntry) {
@@ -92,7 +93,8 @@ function mergeById(existing: unknown[], incoming: unknown[]): unknown[] {
 // ── GET /api/data?section=audit_log   → { data: [...] }
 export async function GET(req: Request) {
   const section = new URL(req.url).searchParams.get('section') as keyof PortfolioData | null;
-  const file = await readFile();
+  const user = req.headers.get(USER_HEADER);
+  const file = await readFile(user);
   if (section && section in file) return NextResponse.json({ data: file[section] });
   return NextResponse.json(file);
 }
@@ -107,7 +109,8 @@ export async function POST(req: Request) {
       | { section: keyof PortfolioData; data: unknown[]; action?: string }
       | { sections: Partial<Record<keyof PortfolioData, unknown[]>>; action?: string };
 
-    const file = await readFile();
+    const user = req.headers.get(USER_HEADER);
+  const file = await readFile(user);
 
     if ('sections' in body) {
       // Multi-section atomic update
@@ -160,7 +163,7 @@ export async function POST(req: Request) {
       });
     }
 
-    if (!DEMO) await writeFile(file);
+    if (!DEMO) await writeFile(file, user);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });

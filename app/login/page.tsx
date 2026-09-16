@@ -7,6 +7,7 @@ import { Lock, Loader2 } from 'lucide-react';
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -19,7 +20,7 @@ function LoginForm() {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username, password }),
       });
       const json = await res.json();
       if (!json.ok) {
@@ -44,25 +45,37 @@ function LoginForm() {
         </div>
         <div>
           <h1 className="text-lg font-bold text-slate-100">Portfolio</h1>
-          <p className="mt-0.5 text-xs text-slate-500">Enter your password to continue</p>
+          <p className="mt-0.5 text-xs text-slate-500">Sign in to continue</p>
         </div>
       </div>
 
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        autoFocus
-        autoComplete="current-password"
-        className="w-full rounded-lg border border-[#2a2d3e] bg-[#0f1117] px-3 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-indigo-500"
-      />
+      <div className="space-y-2">
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Username"
+          autoFocus
+          autoCapitalize="none"
+          autoCorrect="off"
+          autoComplete="username"
+          className="w-full rounded-lg border border-[#2a2d3e] bg-[#0f1117] px-3 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-indigo-500"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          autoComplete="current-password"
+          className="w-full rounded-lg border border-[#2a2d3e] bg-[#0f1117] px-3 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-indigo-500"
+        />
+      </div>
 
       {error && <p className="text-center text-xs text-red-400">{error}</p>}
 
       <button
         type="submit"
-        disabled={busy || !password}
+        disabled={busy || !username || !password}
         className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy && <Loader2 className="h-4 w-4 animate-spin" />}

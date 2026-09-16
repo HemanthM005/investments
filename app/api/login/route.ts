@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { SESSION_COOKIE, sessionToken, safeEqual, authEnabled } from '@/lib/auth';
+import { SESSION_COOKIE, sessionToken, verifyCredentials, authEnabled } from '@/lib/auth';
 import { clientKey, retryAfterMs, recordFailure, recordSuccess } from '@/lib/loginLimit';
 
 const ONE_YEAR = 60 * 60 * 24 * 365;
@@ -21,22 +21,27 @@ export async function POST(req: Request) {
   }
 
   let password = '';
+  let username = '';
   try {
-    ({ password } = await req.json());
+    ({ password = '', username = '' } = await req.json());
   } catch {
     return NextResponse.json({ ok: false, error: 'Bad request' }, { status: 400 });
   }
 
-  if (typeof password !== 'string' || !safeEqual(password, process.env.APP_PASSWORD!)) {
+  const user =
+    typeof password === 'string' && typeof username === 'string'
+      ? verifyCredentials(username, password)
+      : null;
+  if (!user) {
     recordFailure(key);
     // Deliberately vague, and slowed slightly to blunt brute-force attempts.
     await new Promise((r) => setTimeout(r, 400));
-    return NextResponse.json({ ok: false, error: 'Incorrect password' }, { status: 401 });
+    return NextResponse.json({ ok: false, error: 'Incorrect username or password' }, { status: 401 });
   }
 
   recordSuccess(key);
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(SESSION_COOKIE, await sessionToken(), {
+  const res = NextResponse.json({ ok: true, user: user.name });
+  res.cookies.set(SESSION_COOKIE, await sessionToken(user.name), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',

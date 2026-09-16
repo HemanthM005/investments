@@ -9,6 +9,7 @@
 import fs from 'fs';
 import path from 'path';
 import { get, put } from '@vercel/blob';
+import { primaryUser } from './auth';
 
 export type Driver = 'file' | 'blob';
 
@@ -26,6 +27,20 @@ export function driver(): Driver {
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data');
+
+/**
+ * Where a user's document lives.
+ *
+ * The first user in APP_USERS keeps the original un-prefixed paths, so
+ * turning on multi-user needs no data migration and cannot disturb data that
+ * is already there. Everyone else gets their own namespace.
+ */
+export function docPath(name: string, user?: string | null): string {
+  const primary = primaryUser();
+  if (!user || !primary || user === primary) return name;
+  return `users/${user}/${name}`;
+}
+
 const localPath = (name: string) => path.join(DATA_DIR, name);
 
 // ── File driver ───────────────────────────────────────────────────────────
@@ -82,13 +97,15 @@ async function writeBlob(name: string, data: unknown): Promise<void> {
 
 // ── Public API ────────────────────────────────────────────────────────────
 
-/** Read a JSON document, returning `empty` when it does not exist yet. */
-export async function readStore<T>(name: string, empty: T): Promise<T> {
-  return driver() === 'blob' ? readBlob(name, empty) : readLocal(name, empty);
+/** Read a JSON document for a user, returning `empty` when it does not exist. */
+export async function readStore<T>(name: string, empty: T, user?: string | null): Promise<T> {
+  const p = docPath(name, user);
+  return driver() === 'blob' ? readBlob(p, empty) : readLocal(p, empty);
 }
 
-/** Overwrite a JSON document. */
-export async function writeStore(name: string, data: unknown): Promise<void> {
-  if (driver() === 'blob') await writeBlob(name, data);
-  else writeLocal(name, data);
+/** Overwrite a user's JSON document. */
+export async function writeStore(name: string, data: unknown, user?: string | null): Promise<void> {
+  const p = docPath(name, user);
+  if (driver() === 'blob') await writeBlob(p, data);
+  else writeLocal(p, data);
 }
