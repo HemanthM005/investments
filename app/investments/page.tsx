@@ -404,15 +404,15 @@ export default function InvestmentsPage() {
   return (
     <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">My Investments</h1>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-100">My Investments</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             {activeInvestments.length} position{activeInvestments.length !== 1 ? 's' : ''} &mdash; Total value {formatCurrency(stats.currentValue)}
             {watchlistItems.length > 0 && <span className="ml-2 text-slate-500">· {watchlistItems.length} on watchlist</span>}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Refresh button — shown when crypto or gold investments have tickers */}
           {liveTrackedCount > 0 && (
             <div className="flex flex-col items-end gap-0.5">

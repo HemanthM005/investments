@@ -75,7 +75,7 @@ npm run lint    # Lint check
 | `app/api/prices/route.ts` | Fetch live prices (CoinGecko for crypto, Yahoo Finance for stocks) |
 | `app/api/price-history/route.ts` | Fetch historical price data for charts |
 | `app/api/stock-analysis/route.ts` | AI-powered stock analysis via Claude API |
-| `components/Navbar.tsx` | Sticky top nav with active route highlighting |
+| `components/Navbar.tsx` | Grouped sidebar nav — permanent at `lg+`, slide-in drawer below `lg` with a compact mobile top bar |
 | `components/HydrationProvider.tsx` | Top-level provider that hydrates all Zustand stores from server data on mount |
 | `components/SaveErrorBanner.tsx` | Banner shown when a save to `/api/data` fails |
 | `components/InvestmentModal.tsx` | Add/Edit investment modal |
@@ -171,7 +171,7 @@ interface AssetAccount {
 ## Adding a New Page
 1. Create `app/<route>/page.tsx`
 2. Add `'use client'` if using hooks or state
-3. Add the route to `navLinks` in `components/Navbar.tsx`
+3. Add the route to the right group in `navGroups` in `components/Navbar.tsx`
 
 ## Data Persistence
 All data lives under `data/` (gitignored — see Data Privacy Rules at the top). Each domain has its own file:
@@ -189,3 +189,13 @@ Reads/writes go through `app/api/data/route.ts`. Stores call `lib/saveHelper.ts`
 
 ### JSON shape reference
 Every JSON shape (investments by type, bonds, watchlist/sold variants, expenses with splits, money records, habits, planner items, etc.) has a worked example in **[`docs/data-formats.md`](docs/data-formats.md)**. Read that before hand-editing fixtures, writing migrations, or seeding test data.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

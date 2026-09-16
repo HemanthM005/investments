@@ -750,14 +750,14 @@ export default function CashAccountsPage() {
     <div className="max-w-[1200px] mx-auto px-4 py-6 space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-100 flex items-center gap-2">
             <PiggyBank className="h-6 w-6 text-indigo-400" /> Cash &amp; Accounts
           </h1>
-          <p className="text-sm text-slate-400 mt-0.5">Savings, FDs, cash, credit cards — all in one place</p>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Savings, FDs, cash, credit cards — all in one place</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setTransferOpen(true)} className="gap-2">
             <ArrowLeftRight className="h-4 w-4" /> Transfer
           </Button>

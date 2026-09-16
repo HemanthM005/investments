@@ -89,18 +89,19 @@ export default function DashboardPage() {
     <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Portfolio Dashboard</h1>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <h1 className="text-xl font-bold text-slate-100 sm:text-2xl">Portfolio Dashboard</h1>
+          <p className="text-xs text-slate-400 mt-0.5 sm:text-sm">
             {activeInvestments.length} investment{activeInvestments.length !== 1 ? 's' : ''} · {moneyRecords.length} money record{moneyRecords.length !== 1 ? 's' : ''} · {accounts.length} account{accounts.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/expenses"><Button variant="outline" size="sm" className="gap-1.5"><Receipt className="h-3.5 w-3.5" />Expenses</Button></Link>
-          <Link href="/cash-accounts"><Button variant="outline" size="sm" className="gap-1.5"><PiggyBank className="h-3.5 w-3.5" />Cash & Accounts</Button></Link>
-          <Link href="/money-tracker"><Button variant="outline" size="sm" className="gap-1.5"><HandCoins className="h-3.5 w-3.5" />Money Tracker</Button></Link>
-          <Link href="/investments"><Button variant="outline" size="sm">Investments</Button></Link>
+        {/* Horizontally scrollable on phones, wraps normally from sm up */}
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+          <Link href="/expenses" className="flex-shrink-0"><Button variant="outline" size="sm" className="gap-1.5 whitespace-nowrap"><Receipt className="h-3.5 w-3.5" />Expenses</Button></Link>
+          <Link href="/cash-accounts" className="flex-shrink-0"><Button variant="outline" size="sm" className="gap-1.5 whitespace-nowrap"><PiggyBank className="h-3.5 w-3.5" />Cash & Accounts</Button></Link>
+          <Link href="/money-tracker" className="flex-shrink-0"><Button variant="outline" size="sm" className="gap-1.5 whitespace-nowrap"><HandCoins className="h-3.5 w-3.5" />Money Tracker</Button></Link>
+          <Link href="/investments" className="flex-shrink-0"><Button variant="outline" size="sm" className="whitespace-nowrap">Investments</Button></Link>
         </div>
       </div>
 
