@@ -1,12 +1,18 @@
 // Multi-user password gate.
 //
 // Users are declared in one env var:
-//     APP_USERS="alice:s3cret,bob:hunter2"
+//     APP_USERS="alice:pbkdf2$600000$<salt>$<hash>,bob:pbkdf2$..."
+//
+// Generate an entry with:  npx tsx scripts/hash-password.ts <user> <password>
+// Plaintext entries still work so an existing list keeps functioning, but
+// they are reported by `hasPlaintextPasswords()`.
 //
 // The session cookie is `<user>.<hmac>`, where the HMAC covers the username
 // and is keyed by AUTH_SECRET. Without the secret it can't be forged, and no
 // password ever leaves the server. Web Crypto is used (not node:crypto) so
 // this runs unchanged in proxy.ts, which may execute on the Edge runtime.
+
+import { verifyPassword, isHashed } from './password';
 
 export const SESSION_COOKIE = 'ip_session';
 /** Set by proxy.ts from the verified cookie; routes read the user from here. */
@@ -32,6 +38,8 @@ export function appUsers(): AppUser[] {
       .map((pair) => pair.trim())
       .filter(Boolean)
       .map((pair) => {
+        // Only split on the FIRST colon — a pbkdf2 hash contains none, but
+        // a plaintext password might.
         const idx = pair.indexOf(':');
         const name = pair.slice(0, idx).trim().toLowerCase();
         const password = pair.slice(idx + 1);
@@ -113,13 +121,22 @@ export async function userFromCookie(cookieValue: string | undefined): Promise<s
  * Always walks the full list and always runs a comparison so the work does
  * not reveal whether the username existed.
  */
-export function verifyCredentials(username: string, password: string): AppUser | null {
+export async function verifyCredentials(
+  username: string,
+  password: string
+): Promise<AppUser | null> {
   const wanted = username.trim().toLowerCase();
   let found: AppUser | null = null;
   for (const u of appUsers()) {
-    const nameOk = safeEqual(wanted, u.name);
-    const passOk = safeEqual(password, u.password);
-    if (nameOk && passOk) found = u;
+    // Always verify, even when the name does not match, so the time taken
+    // does not reveal whether the username exists.
+    const passOk = await verifyPassword(password, u.password);
+    if (safeEqual(wanted, u.name) && passOk) found = u;
   }
   return found;
+}
+
+/** True when any configured user still has a plaintext password. */
+export function hasPlaintextPasswords(): boolean {
+  return appUsers().some((u) => !isHashed(u.password));
 }

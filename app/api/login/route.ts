@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
   const user =
     typeof password === 'string' && typeof username === 'string'
-      ? verifyCredentials(username, password)
+      ? await verifyCredentials(username, password)
       : null;
   if (!user) {
     recordFailure(key);
