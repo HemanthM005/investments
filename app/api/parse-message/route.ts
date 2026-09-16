@@ -56,7 +56,7 @@ Return ONLY the JSON object, no markdown or extra text.`;
         Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'mixtral-8x7b-32768',
+        model: 'openai/gpt-oss-120b',
         messages: [
           {
             role: 'user',
@@ -69,7 +69,9 @@ Return ONLY the JSON object, no markdown or extra text.`;
     });
 
     if (!response.ok) {
-      throw new Error(`Groq API error: ${response.statusText}`);
+      const errorData = await response.json();
+      console.error('Groq API error:', errorData);
+      throw new Error(`Groq API error: ${JSON.stringify(errorData)}`);
     }
 
     const data = await response.json();

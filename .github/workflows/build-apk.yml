@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK with Docker
 
 on:
   push:
@@ -9,17 +9,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: cimg/android:latest
+      options: --user root
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v5
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-
-      - name: Set up Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -30,22 +27,24 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Build APK
+      - name: Build Release APK
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease --stacktrace
 
       - name: Upload APK as Artifact
-        uses: actions/upload-artifact@v4
         if: success()
+        uses: actions/upload-artifact@v4
         with:
           name: Investment-Portfolio-APK
           path: android/app/build/outputs/apk/release/app-release.apk
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
         if: success()
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: apk-build-${{ github.run_number }}
           name: 📱 APK Build #${{ github.run_number }}
@@ -53,9 +52,9 @@ jobs:
           body: |
             ## Investment Portfolio Android APK
 
-            **Download:** Click on the `.apk` file above
+            **Download:** Click on `app-release.apk` above
 
-            **Installation:**
+            **Installation Steps:**
             1. Transfer APK to your Android phone
             2. Go to Settings → Security → Enable "Unknown Sources"
             3. Tap the APK file to install
@@ -63,13 +62,18 @@ jobs:
 
             **Share with Users:**
             - Upload this APK to Google Drive / Dropbox
-            - Share the link
-            - Users follow the installation steps above
+            - Share the download link
+            - Users follow installation steps above
 
-            **Build Info:**
+            **Build Details:**
             - Built from: ${{ github.sha }}
+            - Build #: ${{ github.run_number }}
             - Timestamp: ${{ github.event.head_commit.timestamp }}
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Failure Notification
+        if: failure()
+        run: echo "❌ APK build failed. Check logs above for details."
