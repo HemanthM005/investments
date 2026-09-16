@@ -109,6 +109,20 @@ export async function existsStore(name: string, user?: string | null): Promise<b
   }
 }
 
+/** Size in bytes of a user's document, or 0 when it does not exist. */
+export async function sizeStore(name: string, user?: string | null): Promise<number> {
+  const p = docPath(name, user);
+  if (driver() === 'file') {
+    const file = localPath(p);
+    return fs.existsSync(file) ? fs.statSync(file).size : 0;
+  }
+  try {
+    return (await head(p)).size ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** Remove a user's document. Missing documents are not an error. */
 export async function deleteStore(name: string, user?: string | null): Promise<void> {
   const p = docPath(name, user);

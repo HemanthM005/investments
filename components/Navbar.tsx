@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   TrendingUp, BarChart2, FileText, Landmark, HandCoins, PiggyBank, Receipt,
   RefreshCw, GitCompare, Flame, CalendarCheck, Activity, Heart, Sparkles,
-  Repeat, Zap, Menu, X, LogOut, User, Users,
+  Repeat, Zap, Menu, X, LogOut, User, Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/lib/appStore';
@@ -67,7 +67,7 @@ const navGroups = [
 const allLinks = navGroups.flatMap((g) => g.links);
 
 // Shown only to the owner — see /api/admin/users
-const OWNER_LINK = { href: '/users', label: 'Users', icon: Users };
+const OWNER_LINK = { href: '/admin', label: 'Admin', icon: Shield };
 
 export default function Navbar() {
   const pathname = usePathname();
