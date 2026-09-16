@@ -8,7 +8,7 @@ const FIELD =
   'w-full rounded-lg border border-[#2a2d3e] bg-[#0f1117] px-3 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-indigo-500';
 
 export default function RegisterPage() {
-  const [config, setConfig] = useState<{ enabled: boolean; minLength: number } | null>(null);
+  const [config, setConfig] = useState<{ enabled: boolean; requiresCode: boolean; minLength: number } | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -17,7 +17,7 @@ export default function RegisterPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    fetch('/api/register').then((r) => r.json()).then(setConfig).catch(() => setConfig({ enabled: false, minLength: 6 }));
+    fetch('/api/register').then((r) => r.json()).then(setConfig).catch(() => setConfig({ enabled: false, requiresCode: false, minLength: 6 }));
   }, []);
 
   async function submit(e: React.FormEvent) {
@@ -85,13 +85,15 @@ export default function RegisterPage() {
             onChange={(e) => setPassword(e.target.value)} />
           <input className={FIELD} type="password" placeholder="Confirm password" value={confirm}
             autoComplete="new-password" onChange={(e) => setConfirm(e.target.value)} />
-          <input className={FIELD} placeholder="Invite code" value={code}
-            onChange={(e) => setCode(e.target.value)} />
+          {config?.requiresCode && (
+            <input className={FIELD} placeholder="Invite code" value={code}
+              onChange={(e) => setCode(e.target.value)} />
+          )}
         </div>
 
         {error && <p className="text-center text-xs text-red-400">{error}</p>}
 
-        <button type="submit" disabled={busy || !username || !password || !confirm || !code}
+        <button type="submit" disabled={busy || !username || !password || !confirm || (config?.requiresCode && !code)}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
           {busy && <Loader2 className="h-4 w-4 animate-spin" />}
           {busy ? 'Creating…' : 'Create account'}

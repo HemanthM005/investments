@@ -61,14 +61,24 @@ export function primaryUser(): string | null {
 }
 
 export function authEnabled(): boolean {
-  // Registration is only reachable behind a code, and the gate must stay on
-  // whenever any credential source exists.
-  return appUsers().length > 0 || Boolean(process.env.REGISTER_CODE);
+  // The gate must stay on whenever anyone can hold an account.
+  return appUsers().length > 0 || registrationEnabled();
 }
 
-/** Registration is off unless an invite code is configured. */
+/** Registration is on unless explicitly switched off. */
 export function registrationEnabled(): boolean {
-  return Boolean(process.env.REGISTER_CODE);
+  return process.env.REGISTRATION_ENABLED !== 'false';
+}
+
+/**
+ * The invite code, or null when none is required.
+ *
+ * An unset or empty REGISTER_CODE means anyone who reaches /register can
+ * create an account. Set REGISTRATION_ENABLED=false to close it entirely.
+ */
+export function registerCode(): string | null {
+  const code = process.env.REGISTER_CODE?.trim();
+  return code ? code : null;
 }
 
 export function minPasswordLength(): number {
