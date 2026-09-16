@@ -2,12 +2,42 @@ import { create } from 'zustand';
 import { useExpenseStore } from './expenseStore';
 import { useMoneyStore } from './moneyStore';
 import { useRecurringStore } from './recurringStore';
+import { useAssetStore } from './assetStore';
 import type { ExpenseCategory } from './types';
+
+/** Where an imported message should land. */
+export type Destination =
+  | 'expense' | 'subscription' | 'lent' | 'borrowed'
+  | 'account_transfer' | 'card_payment';
+
+export interface ImportOptions {
+  destination?: Destination;
+  /** Account money leaves (the bank paying a card bill). */
+  fromAccountId?: string;
+  /** Account money arrives at (the card being paid). */
+  toAccountId?: string;
+}
+
+/** The destination implied by the parsed type, used as the default. */
+export function defaultDestination(type: ParsedMessage['type'], raw: string): Destination | null {
+  switch (type) {
+    case 'expense': return 'expense';
+    case 'subscription': return 'subscription';
+    case 'card_payment': return 'card_payment';
+    case 'account_transfer': return 'account_transfer';
+    case 'payment':
+    case 'transfer':
+      return /\b(credited|received|from)\b/i.test(raw) ? 'borrowed' : 'lent';
+    default: return null;
+  }
+}
 
 export interface ParsedMessage {
   id: string;
   raw_text: string;
-  type: 'expense' | 'income' | 'payment' | 'transfer' | 'subscription' | 'unknown';
+  type:
+    | 'expense' | 'card_payment' | 'account_transfer'
+    | 'income' | 'payment' | 'transfer' | 'subscription' | 'unknown';
   amount?: number;
   currency: 'INR' | 'USD';
   date: string; // YYYY-MM-DD
@@ -16,14 +46,18 @@ export interface ParsedMessage {
   person_name?: string;
   payment_method?: string;
   account_name?: string;
+  from_account?: string;
+  to_account?: string;
   confidence: number; // 0-1
   parsed_at: string; // ISO timestamp
   status: 'pending' | 'approved' | 'rejected' | 'imported';
   notes?: string;
   // Set on import so deleting the message can also remove what it created.
   // Without this the imported record is unreachable from here.
-  imported_section?: 'expenses' | 'money_records' | 'recurring';
+  imported_section?: 'expenses' | 'money_records' | 'recurring' | 'accounts';
   imported_id?: string;
+  /** Which account holds imported_id when imported_section is 'accounts'. */
+  imported_account_id?: string;
 }
 
 interface MessageParserState {
@@ -36,7 +70,7 @@ interface MessageParserState {
   updateMessage: (id: string, updates: Partial<ParsedMessage>) => void;
   approveMessage: (id: string) => void;
   rejectMessage: (id: string) => void;
-  importMessage: (id: string) => Promise<void>;
+  importMessage: (id: string, opts?: ImportOptions) => Promise<void>;
   deleteMessage: (id: string, alsoDeleteRecord?: boolean) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
@@ -115,10 +149,16 @@ export const useMessageParserStore = create<MessageParserState>((set, get) => ({
     get().updateMessage(id, { status: 'rejected' });
   },
 
-  importMessage: async (id) => {
+  importMessage: async (id, opts = {}) => {
     const msg = get().messages.find((m) => m.id === id);
     if (!msg || !msg.amount || !msg.date) {
       set({ error: 'Cannot import: missing required fields' });
+      return;
+    }
+
+    const destination = opts.destination ?? defaultDestination(msg.type, msg.raw_text);
+    if (!destination) {
+      set({ error: `No destination for "${msg.type}" — choose one before importing.` });
       return;
     }
 
@@ -126,9 +166,9 @@ export const useMessageParserStore = create<MessageParserState>((set, get) => ({
 
     try {
       const notes = `Auto-parsed from: ${msg.raw_text}`;
-      let imported: Pick<ParsedMessage, 'imported_section' | 'imported_id'> = {};
+      let imported: Pick<ParsedMessage, 'imported_section' | 'imported_id' | 'imported_account_id'> = {};
 
-      switch (msg.type) {
+      switch (destination) {
         case 'expense': {
           const newId = useExpenseStore.getState().addExpense({
             date: msg.date,
@@ -160,10 +200,10 @@ export const useMessageParserStore = create<MessageParserState>((set, get) => ({
           break;
         }
 
-        case 'payment':
-        case 'transfer': {
+        case 'lent':
+        case 'borrowed': {
           useMoneyStore.getState().addRecord({
-            type: inferDirection(msg.raw_text),
+            type: destination,
             person_name: msg.person_name || 'Unknown',
             amount: msg.amount,
             settled_amount: 0,
@@ -176,11 +216,29 @@ export const useMessageParserStore = create<MessageParserState>((set, get) => ({
           break;
         }
 
-        default:
-          // 'income' and 'unknown' have no destination section yet. Say so
-          // rather than marking the message imported and dropping it.
-          set({ error: `No destination for type "${msg.type}" — add it manually.` });
-          return;
+        // Paying a card bill and moving money between accounts are the same
+        // operation: credit the destination, debit the source. Neither is
+        // spending — recording them as expenses would double-count.
+        case 'card_payment':
+        case 'account_transfer': {
+          const { fromAccountId, toAccountId } = opts;
+          if (!fromAccountId || !toAccountId) {
+            set({ error: 'Choose both the source and destination account.' });
+            return;
+          }
+          if (fromAccountId === toAccountId) {
+            set({ error: 'Source and destination must be different accounts.' });
+            return;
+          }
+          const updated = useAssetStore.getState().addTransaction(
+            toAccountId,
+            { date: msg.date, type: 'credit', amount: msg.amount, note: msg.description || 'Imported from message' },
+            fromAccountId,
+          );
+          const txId = updated.find((a) => a.id === toAccountId)?.transactions?.[0]?.id;
+          imported = { imported_section: 'accounts', imported_id: txId, imported_account_id: toAccountId };
+          break;
+        }
       }
 
       get().updateMessage(id, { status: 'imported', ...imported });
@@ -206,6 +264,12 @@ export const useMessageParserStore = create<MessageParserState>((set, get) => ({
           break;
         case 'recurring':
           useRecurringStore.getState().deleteRecurring(msg.imported_id);
+          break;
+        case 'accounts':
+          // deleteTransaction also removes the paired side of a transfer
+          if (msg.imported_account_id) {
+            useAssetStore.getState().deleteTransaction(msg.imported_account_id, msg.imported_id);
+          }
           break;
       }
     }

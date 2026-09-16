@@ -1,6 +1,14 @@
 interface ParsedMessage {
   raw_text: string;
-  type: 'expense' | 'income' | 'payment' | 'transfer' | 'subscription' | 'unknown';
+  type:
+    | 'expense'          // real spending — money left your net worth
+    | 'card_payment'     // paying a credit card bill — a transfer, NOT new spending
+    | 'account_transfer' // moving money between your own accounts
+    | 'income'
+    | 'payment'          // paying a person
+    | 'transfer'         // money to/from a person
+    | 'subscription'
+    | 'unknown';
   amount?: number;
   currency: 'INR' | 'USD';
   date: string; // YYYY-MM-DD
@@ -9,6 +17,8 @@ interface ParsedMessage {
   person_name?: string; // who paid or who this is for
   payment_method?: string; // UPI, Card, Bank Transfer, Cash, etc.
   account_name?: string; // if mentioned (HDFC, ICICI, Paytm, etc.)
+  from_account?: string; // source account for a transfer or card payment
+  to_account?: string;   // destination account (the card being paid, etc.)
   confidence: number; // 0-1, how confident the parser is
 }
 
@@ -31,32 +41,51 @@ export async function POST(req: Request) {
       return Response.json({ error: 'message_text is required' }, { status: 400 });
     }
 
-    const prompt = `You are a financial data extraction assistant. Parse the following SMS/notification message and extract financial information.
+    const prompt = `You are a financial data extraction assistant for a personal finance app.
+Parse the SMS/notification below and decide what it actually represents.
 
 Message: "${message_text}"
 
-Extract and return ONLY a JSON object with these fields (use null for missing data):
+THE MOST IMPORTANT DISTINCTION — is this new spending, or just moving money?
+
+- Paying a CREDIT CARD BILL is NOT an expense. The purchases on that card were
+  already recorded as expenses when they happened; counting the bill payment
+  again would double-count it. It moves money from a bank account to the card.
+  → type "card_payment", from_account = the bank paying, to_account = the card.
+  Phrases: "payment received", "bill paid", "credit card payment", "autopay",
+  "paid towards your card", "CRED", "BBPS".
+
+- Moving money between YOUR OWN accounts (savings → wallet, bank → FD,
+  self transfer) is also not spending. → type "account_transfer", with
+  from_account and to_account.
+
+- Only money genuinely leaving your net worth to a merchant is "expense".
+
+Return ONLY a JSON object (use null for anything missing):
 {
-  "type": "expense" | "income" | "payment" | "transfer" | "subscription" | "unknown",
+  "type": "expense" | "card_payment" | "account_transfer" | "income" | "payment" | "transfer" | "subscription" | "unknown",
   "amount": number or null,
   "currency": "INR" or "USD",
-  "date": "YYYY-MM-DD" (today if not mentioned),
-  "category": "string" or null (Food, Travel, Shopping, Bills, Entertainment, Utilities, Healthcare, etc.),
-  "description": "clear summary",
-  "person_name": "string or null (who paid, who received, or who this is for)",
-  "payment_method": "string or null (UPI, Card, Bank Transfer, Cash, Wallet, etc.)",
-  "account_name": "string or null (HDFC, ICICI, Paytm, GooglePay, etc.)",
+  "date": "YYYY-MM-DD" (today if not stated),
+  "category": string or null (Food, Groceries, Travel, Shopping, Entertainment, Bills, Health, Education, Rent, Subscriptions, Other),
+  "description": "clear short summary",
+  "person_name": string or null (only for money to/from a PERSON),
+  "payment_method": string or null (UPI, Card, Bank Transfer, Cash, Wallet, NEFT, IMPS),
+  "account_name": string or null (the account the message is about),
+  "from_account": string or null (where money left, for transfers and card payments),
+  "to_account": string or null (where money arrived, e.g. the card being paid),
   "confidence": number between 0 and 1
 }
 
-Guidelines:
-- For Google Pay: type="payment", extract amount, person if visible
-- For expense notifications: type="expense", extract category based on merchant
-- For UPI transfers: type="transfer", extract person and amount
-- For subscriptions: type="subscription" (Netflix, Amazon Prime, etc.)
-- If amount is in rupees symbol (₹), use INR; if in $, use USD
-- Date: extract from message or use today if not mentioned
-- Confidence: 1 if clear, 0.5 if uncertain, 0.2 if just a notification
+More rules:
+- Merchant purchase on a card → "expense", account_name = that card.
+- Netflix/Prime/Spotify style recurring charge → "subscription".
+- Money sent to or received from a named person → "payment" or "transfer",
+  and set person_name.
+- Salary or refund arriving → "income".
+- Credit to a credit card account is almost always a bill payment, not income.
+- Amounts like "2,45,600.00" are Indian formatting → 245600.
+- If you cannot tell, use "unknown" and a low confidence rather than guessing.
 
 Return ONLY the JSON object, no markdown or extra text.`;
 

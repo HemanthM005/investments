@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useMessageParserStore, type ParsedMessage } from '@/lib/messageParserStore';
+import {
+  useMessageParserStore, defaultDestination,
+  type ParsedMessage, type Destination, type ImportOptions,
+} from '@/lib/messageParserStore';
+import { useAssetStore } from '@/lib/assetStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,6 +28,17 @@ const SECTION_LABEL: Record<string, string> = {
   money_records: 'Money Tracker',
   recurring: 'Subscriptions',
 };
+
+const DESTINATIONS: { value: Destination; label: string; hint: string }[] = [
+  { value: 'expense',          label: 'Daily Expense',      hint: 'money you actually spent' },
+  { value: 'card_payment',     label: 'Credit Card Payment', hint: 'paying a card bill — moves money, not spending' },
+  { value: 'account_transfer', label: 'Account Transfer',   hint: 'between your own accounts' },
+  { value: 'subscription',     label: 'Subscription',       hint: 'recurring charge' },
+  { value: 'lent',             label: 'Money Tracker — I lent',     hint: 'someone owes you' },
+  { value: 'borrowed',         label: 'Money Tracker — I borrowed', hint: 'you owe someone' },
+];
+
+const NEEDS_ACCOUNTS = new Set<Destination>(['card_payment', 'account_transfer']);
 
 export default function MessageParserPage() {
   const store = useMessageParserStore();
@@ -69,9 +84,9 @@ export default function MessageParserPage() {
     }
   };
 
-  const handleImport = async (id: string) => {
+  const handleImport = async (id: string, opts?: ImportOptions) => {
     store.setLoading(true);
-    await store.importMessage(id);
+    await store.importMessage(id, opts);
   };
 
   return (
@@ -152,7 +167,7 @@ export default function MessageParserPage() {
               message={msg}
               onApprove={() => store.approveMessage(msg.id)}
               onReject={() => store.rejectMessage(msg.id)}
-              onImport={() => handleImport(msg.id)}
+              onImport={(opts) => handleImport(msg.id, opts)}
               onDelete={() => { setAlsoDeleteRecord(true); setPendingDelete(msg); }}
               loading={store.loading}
             />
@@ -204,7 +219,7 @@ interface CardProps {
   message: ParsedMessage;
   onApprove: () => void;
   onReject: () => void;
-  onImport: () => void;
+  onImport: (opts: ImportOptions) => void;
   onDelete: () => void;
   loading: boolean;
 }
@@ -217,6 +232,14 @@ function ParsedMessageCard({
   onDelete,
   loading,
 }: CardProps) {
+  const accounts = useAssetStore((st) => st.accounts);
+  // Default to what the parse implies; the picker lets it be overridden.
+  const [dest, setDest] = useState<Destination | null>(
+    () => defaultDestination(message.type, message.raw_text)
+  );
+  const [fromId, setFromId] = useState('');
+  const [toId, setToId] = useState('');
+
   const statusColors: Record<string, string> = {
     pending: 'bg-amber-950/30 border-amber-700/40 text-amber-300',
     approved: 'bg-emerald-950/30 border-emerald-700/40 text-emerald-300',
@@ -297,6 +320,64 @@ function ParsedMessageCard({
           <p className="font-mono truncate">"{message.raw_text}"</p>
         </div>
 
+        {message.status === 'approved' && (
+          <div className="space-y-2 rounded-lg border border-[#2a2d3e] bg-[#0f1117] p-3">
+            <label className="block text-[11px] font-medium uppercase tracking-wider text-slate-500">
+              Import as
+            </label>
+            <select
+              value={dest ?? ''}
+              onChange={(e) => setDest(e.target.value as Destination)}
+              className="w-full rounded-lg border border-[#2a2d3e] bg-[#1a1d2e] px-2.5 py-2 text-sm text-slate-100 outline-none focus:border-indigo-500"
+            >
+              <option value="" disabled>Choose a destination…</option>
+              {DESTINATIONS.map((d) => (
+                <option key={d.value} value={d.value}>{d.label}</option>
+              ))}
+            </select>
+            {dest && (
+              <p className="text-[11px] text-slate-500">
+                {DESTINATIONS.find((d) => d.value === dest)?.hint}
+              </p>
+            )}
+
+            {dest && NEEDS_ACCOUNTS.has(dest) && (
+              <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
+                <div>
+                  <label className="block pb-1 text-[11px] text-slate-500">Money leaves</label>
+                  <select
+                    value={fromId}
+                    onChange={(e) => setFromId(e.target.value)}
+                    className="w-full rounded-lg border border-[#2a2d3e] bg-[#1a1d2e] px-2.5 py-2 text-sm text-slate-100 outline-none focus:border-indigo-500"
+                  >
+                    <option value="">Select account…</option>
+                    {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block pb-1 text-[11px] text-slate-500">
+                    {dest === 'card_payment' ? 'Card being paid' : 'Money arrives'}
+                  </label>
+                  <select
+                    value={toId}
+                    onChange={(e) => setToId(e.target.value)}
+                    className="w-full rounded-lg border border-[#2a2d3e] bg-[#1a1d2e] px-2.5 py-2 text-sm text-slate-100 outline-none focus:border-indigo-500"
+                  >
+                    <option value="">Select account…</option>
+                    {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+                {(message.from_account || message.to_account) && (
+                  <p className="text-[11px] text-slate-600 sm:col-span-2">
+                    Message mentioned{message.from_account ? ` from "${message.from_account}"` : ''}
+                    {message.to_account ? ` to "${message.to_account}"` : ''}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Notes input (if approved or imported) */}
         {(message.status === 'approved' || message.status === 'imported') && (
           <div className="text-xs text-slate-500">
@@ -332,8 +413,8 @@ function ParsedMessageCard({
           {message.status === 'approved' && (
             <Button
               size="sm"
-              onClick={onImport}
-              disabled={loading}
+              onClick={() => onImport({ destination: dest ?? undefined, fromAccountId: fromId, toAccountId: toId })}
+              disabled={loading || !dest || (NEEDS_ACCOUNTS.has(dest) && (!fromId || !toId))}
               className="gap-1 bg-indigo-600 hover:bg-indigo-700"
             >
               <Upload className="h-3.5 w-3.5" />
