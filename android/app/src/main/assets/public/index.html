@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investment Portfolio</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f1117;
+      color: #c9d1d9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      text-align: center;
+      max-width: 500px;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+    p {
+      font-size: 14px;
+      color: #8b949e;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    button {
+      background: #238636;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #2ea043;
+    }
+    .status {
+      font-size: 12px;
+      color: #6e7681;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Investment Portfolio</h1>
+    <p>Connecting to app server...</p>
+    <button onclick="window.location.href = 'http://localhost:3000'">Open App</button>
+    <div class="status">
+      <p>Make sure the dev server is running:</p>
+      <code>npm run dev</code>
+    </div>
+  </div>
+</body>
+</html>
