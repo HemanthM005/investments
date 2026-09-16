@@ -47,30 +47,63 @@ Output: {
 }
 ```
 
-## ❌ ATTEMPTED BUT NOT COMPLETED: APK Building
+## ✅ APK BUILDING — RESOLVED (2026-09-16)
 
-### Why APK Building Failed
-Multiple infrastructure incompatibilities were encountered that proved unsolvable:
+### What was actually wrong
+Earlier attempts tried to force Capacitor 8 down to **Java 11 / AGP 7.4.2**. That was the wrong
+direction: Capacitor 8 with `compileSdk 36` *requires* Java 21 and AGP 8.x, so every downgrade
+just moved the error somewhere else. The real blocker was much simpler — **no Android SDK was
+installed on the machine**, and the only JDK present was a Java 8 applet-plugin JRE.
 
-1. **EAS Build (Expo)**
-   - Issue: Java version mismatch (servers have Java 11, newer Gradle requires Java 17+)
-   - Status: Tried 7+ times, kept hitting JDK/Gradle incompatibilities
-   
-2. **GitHub Actions + Docker**
-   - Issue: Docker image pulls failed, file path issues in build
-   - Status: Couldn't pull Android SDK container reliably
+### The working setup (macOS, Apple Silicon)
+```bash
+brew install openjdk@21                          # Capacitor 8 needs JDK 21
+brew install --cask android-commandlinetools     # ~500MB, no Android Studio needed
 
-3. **Local Android SDK Setup**
-   - Java versions: Multiple incompatibilities between Java 21 + Gradle 7.4.2 + Capacitor plugins
-   - Root cause: Capacitor auto-generates build files with hardcoded Java 21 requirements
-   - Files have "DO NOT EDIT" warnings but still require editing to work
-   - Status: Cascading incompatibility issues
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21
+export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
+export ANDROID_SDK_ROOT=$ANDROID_HOME
 
-### Lessons Learned
-- Android/Gradle/Java ecosystem has strict version requirements
-- Capacitor plugins auto-generate config files with Java 21, but EAS/old Gradle need Java 11
-- Local builds require: Android SDK + proper Java version + Gradle compatibility
-- APK building is legitimate infrastructure work, not a quick config change
+yes | sdkmanager --licenses
+sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+echo "sdk.dir=$ANDROID_HOME" > android/local.properties   # gitignored
+```
+
+### Config corrections applied
+| File | Change |
+|------|--------|
+| `android/build.gradle` | AGP `7.4.2` → `8.13.0` |
+| `android/app/capacitor.build.gradle` | reverted to `JavaVersion.VERSION_21` (generated file — do not hand-edit) |
+| `android/capacitor-cordova-android-plugins/build.gradle` | reverted to AGP 8.13.0 + `VERSION_21` |
+| `android/gradle.properties` | `org.gradle.jvmargs` `-Xmx1536m` → `-Xmx4096m` |
+
+Gradle wrapper stays at **8.14.3** (already correct — it supports AGP 8.13 on JDK 21).
+
+### Building
+```bash
+./scripts/build-apk.sh            # debug APK  → ~/Desktop/InvestmentApp.apk
+./scripts/build-apk.sh release    # unsigned release APK (needs signing before Play Store)
+```
+
+The debug APK is signed with the Android debug key, so it installs directly on a phone via
+sideload — no Play Store, no signing config needed.
+
+### Verified output
+```
+android/app/build/outputs/apk/debug/app-debug.apk   13 MB
+applicationId: com.investments.app
+minSdk: 24   targetSdk: 36
+BUILD SUCCESSFUL in 1m 6s (157 tasks)
+```
+
+### Note on what the APK contains
+`capacitor.config.ts` sets `server.url` to the Vercel deployment, so the APK is a **thin native
+shell that loads the live web app**. Shipping app changes does not require rebuilding the APK —
+just deploy to Vercel. Rebuild the APK only when native config, plugins, icons, or the app ID change.
+
+### Installing on the phone
+1. USB: `adb install -r ~/Desktop/InvestmentApp.apk` (adb is at `$ANDROID_HOME/platform-tools/adb`)
+2. Or copy the `.apk` to the phone and tap it — enable "Install unknown apps" for the file manager.
 
 ## 📋 CURRENT STATE
 
@@ -81,40 +114,43 @@ Multiple infrastructure incompatibilities were encountered that proved unsolvabl
    - Real-time price updates
    - Full data persistence
    
-2. **Mobile Access**: Users can:
-   - Open in browser on phone
-   - Tap "Add to Home Screen" → native app experience
-   - OR download APK (if built successfully)
+2. **Android APK** (working): `./scripts/build-apk.sh` → `~/Desktop/InvestmentApp.apk`
+   - Sideload via `adb install -r` or by tapping the file on the phone
+
+3. **Mobile Web**: Open in phone browser → "Add to Home Screen"
 
 ### Files & Configuration
 - **Capacitor Config**: `capacitor.config.ts` → points to Vercel URL
 - **Message Parser Endpoint**: `/app/api/parse-message`
 - **Groq API Key**: Set on Vercel environment variables
-- **Android Files**: `android/` directory with Capacitor setup (not built into APK yet)
+- **Android Files**: `android/` directory with Capacitor setup — builds to APK via `scripts/build-apk.sh`
 
-## 🔧 IF CONTINUING APK WORK
+## 🔧 APK TROUBLESHOOTING
 
-### Option 1: Use Web App (RECOMMENDED)
-- Already deployed and working
-- Users access via browser or home screen shortcut
-- No build infrastructure complexity
-- **Status**: Ready to ship
+**Rule of thumb: match the toolchain to Capacitor, never the reverse.** Capacitor regenerates
+`capacitor.build.gradle` on every `cap sync`, so any hand-edit to the Java version there is
+overwritten. If the Java version is wrong, change the JDK you build with — not the generated file.
 
-### Option 2: Professional Android Build
-- Install Android Studio locally (one-time, ~2GB)
-- Use Android Studio IDE to build APK
-- Avoids Gradle/Java version conflicts
-- **Time**: ~30 min setup, then `./gradlew assembleRelease`
+| Symptom | Fix |
+|---------|-----|
+| `SDK location not found` | `android/local.properties` missing — the build script recreates it |
+| `Unsupported class file major version` | Wrong `JAVA_HOME`; must be JDK 21 |
+| `compileSdk 36 requires AGP 8.x` | AGP was downgraded in `android/build.gradle`; restore `8.13.0` |
+| `You have not accepted the license` | `yes \| sdkmanager --licenses` |
+| Gradle OOM | raise `org.gradle.jvmargs` in `android/gradle.properties` |
 
-### Option 3: Try EAS Build Again
-- Would need to upgrade Capacitor to newer version
-- Then downgrade Gradle back to 7.x
-- Fragile approach, likely more issues
+### Rejected approaches (and why)
+- **EAS Build** — Expo's Android images assume an Expo/RN project; forcing a Capacitor app through
+  them means fighting a JDK the build server picks. Local builds are faster and fully controllable.
+  (`eas-cli` and `app.json` are leftovers from this attempt and can be removed.)
+- **Android Studio** — works, but is ~2GB for an IDE that is never opened. The command-line tools
+  provide the identical build.
+- **React Native / Flutter rewrite** — an entire rewrite to solve a missing-SDK problem.
 
-### Option 4: Use Different Build Tool
-- Could use React Native instead of Capacitor (larger refactor)
-- Or use Flutter (complete rewrite)
-- Not recommended given working web app
+### iOS (next)
+`@capacitor/ios` is in `package.json` but the `ios/` project has **not** been generated yet.
+When Android is settled: `npx cap add ios`, then build in Xcode. On-device installs need Xcode
+plus an Apple Developer account. Same thin-shell setup, pointed at the same Vercel URL.
 
 ## 📊 Technology Stack
 
@@ -136,35 +172,24 @@ Backend/APIs:
 
 Mobile:
 - Capacitor (web→native wrapper)
-- Android SDK (configured but not built to APK)
+- Android SDK 36 + JDK 21 + AGP 8.13 (APK builds locally)
 
 Hosting:
 - Vercel (production)
 - GitHub (source control)
 ```
 
-## 🎯 RECOMMENDATION
-
-**Ship the web app now.**
-
-The app is complete, features work, message parser works, Groq API integration works. Users get great mobile experience via browser + home screen shortcut. APK building is infrastructure complexity that doesn't add user value.
-
-If APK is needed later:
-1. Use Android Studio (straightforward)
-2. Or use professional service (Codemagic, EAS with fresh setup)
-3. Or upgrade Capacitor + rebuild Android config (time-intensive)
-
 ## 📝 For Next Developer
 
-If picking this up:
-- Web app is the primary deliverable
-- APK work hit fundamental Java/Gradle incompatibilities
-- Don't fight local Android SDK setup - use Android Studio IDE instead
+- The web app on Vercel is the source of truth; the APK is a thin shell around it.
+- App-logic changes ship by deploying to Vercel — **no APK rebuild needed**.
+- Rebuild the APK only for native changes: plugins, icons, app ID, permissions, `capacitor.config.ts`.
+- Never hand-edit `android/app/capacitor.build.gradle` — `cap sync` regenerates it.
 - Message parser is solid - Groq API works great
 - All data models and stores are in place
 
 ---
 
-**Status**: App ready for production web deployment  
+**Status**: Web app deployed; Android APK builds and installs  
 **Last Updated**: 2026-09-16  
 **Deployed URL**: https://investments-five-snowy.vercel.app

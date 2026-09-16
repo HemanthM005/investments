@@ -67,13 +67,13 @@ export default function ForOthersPage() {
     <div className="max-w-[900px] mx-auto px-4 py-6 space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-100 flex items-center gap-2">
             <Heart className="h-6 w-6 text-rose-400" />
             Spent for Others
           </h1>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             Expenses tagged for family &amp; people close to you ·{' '}
             <Link href="/expenses" className="text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1">
               add from Daily Expenses <ExternalLink className="h-3 w-3" />

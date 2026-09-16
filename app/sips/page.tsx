@@ -512,12 +512,12 @@ export default function SipsPage() {
     <div className="max-w-[1200px] mx-auto px-4 py-6 space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-100 flex items-center gap-2">
             <Repeat className="h-6 w-6 text-indigo-400" /> Recurring Investments (SIPs)
           </h1>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             Auto-invest a fixed amount on a schedule · installments apply when you open this page
           </p>
         </div>

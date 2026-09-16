@@ -61,11 +61,12 @@ body {
   min-height: 100vh;
 }
 
-[data-theme="glass"] nav {
+[data-theme="glass"] nav,
+[data-theme="glass"] header {
   background: var(--nav-bg) !important;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom-color: var(--nav-border) !important;
+  border-color: var(--nav-border) !important;
 }
 
 [data-theme="glass"] .glass-card {

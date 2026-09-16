@@ -772,10 +772,10 @@ export default function ExpensesPage() {
     <div className="max-w-[1100px] mx-auto px-4 py-6 space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Daily Expenses</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Track spending · auto-deducts from linked accounts</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-100">Daily Expenses</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Track spending · auto-deducts from linked accounts</p>
         </div>
         <Button onClick={() => setModal({ ...EMPTY, date: todayStr })} className="gap-1.5">
           <Plus className="h-4 w-4" /> Add Expense

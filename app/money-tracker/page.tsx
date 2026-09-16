@@ -864,12 +864,12 @@ export default function MoneyTrackerPage() {
   return (
     <div className="max-w-[1200px] mx-auto px-4 py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-100 flex items-center gap-2">
             <HandCoins className="h-6 w-6 text-indigo-400" /> Money Tracker
           </h1>
-          <p className="text-sm text-slate-400 mt-0.5">Track money you lent and borrowed</p>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Track money you lent and borrowed</p>
         </div>
         <Button onClick={() => { setEditTarget(null); setModalOpen(true); }} className="gap-2">
           <Plus className="h-4 w-4" /> Add Record
