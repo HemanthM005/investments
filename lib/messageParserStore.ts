@@ -20,6 +20,10 @@ export interface ParsedMessage {
   parsed_at: string; // ISO timestamp
   status: 'pending' | 'approved' | 'rejected' | 'imported';
   notes?: string;
+  // Set on import so deleting the message can also remove what it created.
+  // Without this the imported record is unreachable from here.
+  imported_section?: 'expenses' | 'money_records' | 'recurring';
+  imported_id?: string;
 }
 
 interface MessageParserState {
@@ -33,7 +37,7 @@ interface MessageParserState {
   approveMessage: (id: string) => void;
   rejectMessage: (id: string) => void;
   importMessage: (id: string) => Promise<void>;
-  deleteMessage: (id: string) => void;
+  deleteMessage: (id: string, alsoDeleteRecord?: boolean) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -67,6 +71,15 @@ function toExpenseCategory(raw?: string | null): ExpenseCategory {
  */
 function inferDirection(text: string): 'lent' | 'borrowed' {
   return /\b(credited|received|from)\b/i.test(text) ? 'borrowed' : 'lent';
+}
+
+/** moneyStore/recurringStore append without returning an id — read it back. */
+function lastIdOf(
+  items: { id: string }[],
+  section: 'money_records' | 'recurring',
+): Pick<ParsedMessage, 'imported_section' | 'imported_id'> {
+  const last = items[items.length - 1];
+  return last ? { imported_section: section, imported_id: last.id } : {};
 }
 
 export const useMessageParserStore = create<MessageParserState>((set, get) => ({
@@ -113,10 +126,11 @@ export const useMessageParserStore = create<MessageParserState>((set, get) => ({
 
     try {
       const notes = `Auto-parsed from: ${msg.raw_text}`;
+      let imported: Pick<ParsedMessage, 'imported_section' | 'imported_id'> = {};
 
       switch (msg.type) {
         case 'expense': {
-          useExpenseStore.getState().addExpense({
+          const newId = useExpenseStore.getState().addExpense({
             date: msg.date,
             amount: msg.amount,
             category: toExpenseCategory(msg.category),
@@ -125,6 +139,7 @@ export const useMessageParserStore = create<MessageParserState>((set, get) => ({
             description: msg.description,
             notes,
           });
+          imported = { imported_section: 'expenses', imported_id: newId };
           break;
         }
 
@@ -141,6 +156,7 @@ export const useMessageParserStore = create<MessageParserState>((set, get) => ({
             active: true,
             notes,
           });
+          imported = lastIdOf(useRecurringStore.getState().recurring, 'recurring');
           break;
         }
 
@@ -156,6 +172,7 @@ export const useMessageParserStore = create<MessageParserState>((set, get) => ({
             description: msg.description,
             status: 'pending',
           });
+          imported = lastIdOf(useMoneyStore.getState().records, 'money_records');
           break;
         }
 
@@ -166,7 +183,7 @@ export const useMessageParserStore = create<MessageParserState>((set, get) => ({
           return;
       }
 
-      get().updateMessage(id, { status: 'imported' });
+      get().updateMessage(id, { status: 'imported', ...imported });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Import failed' });
     } finally {
@@ -174,10 +191,26 @@ export const useMessageParserStore = create<MessageParserState>((set, get) => ({
     }
   },
 
-  deleteMessage: (id) => {
-    set((state) => ({
-      messages: state.messages.filter((m) => m.id !== id),
-    }));
+  deleteMessage: (id, alsoDeleteRecord = false) => {
+    const msg = get().messages.find((m) => m.id === id);
+
+    // Deleting the message alone leaves whatever the import created behind,
+    // which is almost never what someone means by "delete".
+    if (alsoDeleteRecord && msg?.imported_id && msg.imported_section) {
+      switch (msg.imported_section) {
+        case 'expenses':
+          useExpenseStore.getState().deleteExpense(msg.imported_id);
+          break;
+        case 'money_records':
+          useMoneyStore.getState().deleteRecord(msg.imported_id);
+          break;
+        case 'recurring':
+          useRecurringStore.getState().deleteRecurring(msg.imported_id);
+          break;
+      }
+    }
+
+    set((state) => ({ messages: state.messages.filter((m) => m.id !== id) }));
   },
 
   clearMessages: () => {
