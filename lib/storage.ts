@@ -8,7 +8,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { get, put } from '@vercel/blob';
+import { del, get, head, put } from '@vercel/blob';
 import { primaryUser } from './auth';
 
 export type Driver = 'file' | 'blob';
@@ -96,6 +96,36 @@ async function writeBlob(name: string, data: unknown): Promise<void> {
 }
 
 // ── Public API ────────────────────────────────────────────────────────────
+
+/** Does a user's document exist yet? */
+export async function existsStore(name: string, user?: string | null): Promise<boolean> {
+  const p = docPath(name, user);
+  if (driver() === 'file') return fs.existsSync(localPath(p));
+  try {
+    await head(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Remove a user's document. Missing documents are not an error. */
+export async function deleteStore(name: string, user?: string | null): Promise<void> {
+  const p = docPath(name, user);
+  if (driver() === 'file') {
+    const file = localPath(p);
+    if (fs.existsSync(file)) fs.rmSync(file);
+    return;
+  }
+  try {
+    await del(p);
+  } catch {
+    /* already gone */
+  }
+}
+
+/** The document names every user has. */
+export const USER_DOCS = ['portfolio.json', 'daily-tracker.json', 'daily-planner.json'] as const;
 
 /** Read a JSON document for a user, returning `empty` when it does not exist. */
 export async function readStore<T>(name: string, empty: T, user?: string | null): Promise<T> {
