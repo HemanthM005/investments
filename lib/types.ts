@@ -24,7 +24,8 @@ export interface Investment {
   // Bond payout schedule — when interest_frequency is set, interest/principal are paid
   // out on a schedule (see lib/bonds.ts) instead of accruing into current_price.
   interest_frequency?: BondPayoutFrequency;  // Bond only — how often interest is paid
-  principal_frequency?: BondPayoutFrequency; // Bond only — how principal is repaid (omitted = At Maturity)
+  principal_frequency?: PrincipalFrequency;  // Bond only — how principal is repaid (omitted = At Maturity)
+  principal_schedule?: PrincipalInstallment[]; // Bond only — 'Custom' principal: dates + amounts; the rest is repaid at maturity
   first_payout_date?: string;       // Bond only — YYYY-MM-DD of first interest payout (omitted = purchase + 1 period)
   payout_account_id?: string;       // Bond only — AssetAccount.id credited on each payout
   payout_account_name?: string;     // snapshot of account name
@@ -42,6 +43,13 @@ export interface Investment {
 }
 
 export type BondPayoutFrequency = 'Monthly' | 'Quarterly' | 'Half-Yearly' | 'Yearly' | 'At Maturity';
+// Principal can also follow a hand-entered schedule (specific months of the tenure)
+export type PrincipalFrequency = BondPayoutFrequency | 'Custom';
+
+export interface PrincipalInstallment {
+  date: string;             // YYYY-MM-DD — between purchase and maturity
+  amount: number;           // ₹ of principal repaid on this date (whole holding, not per unit)
+}
 
 export interface BondPayout {
   date: string;             // scheduled payout date (YYYY-MM-DD) — unique per bond

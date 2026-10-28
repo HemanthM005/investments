@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 const SIDEBAR_OPTIONS: { value: SidebarMode; label: string; desc: string; icon: typeof Pin }[] = [
-  { value: 'click', label: 'Click to expand', desc: 'Icons only. Use the panel button at the bottom of the sidebar to show labels.', icon: PanelLeft },
+  { value: 'click', label: 'Click to expand', desc: 'Icons only. Use the panel button at the top of the sidebar to show or hide labels.', icon: PanelLeft },
   { value: 'hover', label: 'Expand on hover', desc: 'Icons only. Hover over the sidebar to see labels — it slides over the page.', icon: MousePointerClick },
   { value: 'pinned', label: 'Always expanded', desc: 'Sidebar always shows icons with labels.', icon: Pin },
 ];

@@ -200,18 +200,25 @@ export default function Navbar() {
           'flex h-12 flex-shrink-0 items-center gap-2 border-b border-[#2a2d3e] px-3 lg:h-14 lg:px-4',
           collapsed && 'lg:justify-center lg:px-0',
         )}>
-          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-600">
+          {/* Click mode keeps its one toggle up here: on the icon rail it replaces the logo */}
+          <div className={cn(
+            'flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-600',
+            sidebarMode === 'click' && collapsed && 'lg:hidden',
+          )}>
             <TrendingUp className="h-4 w-4 text-white" />
           </div>
           <span className={cn('text-sm font-bold text-slate-100', railHidden)}>Portfolio</span>
-          {sidebarMode === 'click' && !collapsed && (
+          {sidebarMode === 'click' && (
             <button
-              onClick={() => updateSettings({ sidebarExpanded: false })}
-              aria-label="Collapse sidebar"
-              title="Collapse sidebar"
-              className="-mr-1 ml-auto hidden rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-[#1a1d2e] hover:text-slate-200 lg:block"
+              onClick={() => updateSettings({ sidebarExpanded: collapsed })}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className={cn(
+                'hidden rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-[#1a1d2e] hover:text-slate-200 lg:block',
+                !collapsed && '-mr-1 ml-auto',
+              )}
             >
-              <PanelLeftClose className="h-4 w-4" />
+              {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </button>
           )}
           <button
@@ -257,19 +264,7 @@ export default function Navbar() {
               </button>
             </div>
           )}
-          <div className={cn('hidden items-center gap-2 lg:flex', collapsed && 'lg:flex-col')}>
-            {themeToggle}
-            {sidebarMode === 'click' && collapsed && (
-              <button
-                onClick={() => updateSettings({ sidebarExpanded: true })}
-                aria-label="Expand sidebar"
-                title="Expand sidebar"
-                className="rounded-lg border border-[#2a2d3e] p-1.5 text-slate-500 transition-colors hover:border-slate-500 hover:text-slate-200"
-              >
-                <PanelLeftOpen className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+          <div className={cn('hidden lg:flex', collapsed && 'lg:justify-center')}>{themeToggle}</div>
         </div>
       </nav>
     </>

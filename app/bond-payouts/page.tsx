@@ -6,7 +6,7 @@ import { Coins, CheckCircle2, Undo2, Ban, AlertCircle, CalendarClock } from 'luc
 import { useInvestmentStore } from '@/lib/store';
 import { useAppStore } from '@/lib/appStore';
 import {
-  addMonths, bondPrincipal, bondStatus, creditDuePayouts, isScheduledBond, netAmount, todayStr, undoPayout,
+  addMonths, bondPrincipal, customInstallments, bondStatus, creditDuePayouts, isScheduledBond, netAmount, todayStr, undoPayout,
   type ScheduledPayout,
 } from '@/lib/bonds';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -289,7 +289,9 @@ export default function BondPayoutsPage() {
                         <p className="text-[10px] text-teal-400/80">@{inv.interest_rate}% p.a.{(inv.tds_percent ?? 0) > 0 && ` · TDS ${inv.tds_percent}%`}</p>
                       </td>
                       <td className="px-4 py-2.5 text-xs text-slate-400">
-                        {inv.interest_frequency} / {inv.principal_frequency ?? 'At Maturity'}
+                        {inv.interest_frequency} / {inv.principal_frequency === 'Custom'
+                          ? `Custom (${customInstallments(inv).length + 1} parts)`
+                          : inv.principal_frequency ?? 'At Maturity'}
                       </td>
                       <td className="px-4 py-2.5 text-right text-slate-300">{formatCurrency(bondPrincipal(inv))}</td>
                       <td className="px-4 py-2.5 text-right text-slate-300">{formatCurrency(st.outstanding)}</td>

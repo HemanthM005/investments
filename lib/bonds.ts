@@ -1,6 +1,6 @@
 'use client';
 
-import type { AccountTransaction, BondPayout, BondPayoutFrequency, Investment } from './types';
+import type { AccountTransaction, BondPayout, BondPayoutFrequency, Investment, PrincipalInstallment } from './types';
 import { useInvestmentStore } from './store';
 import { useAssetStore } from './assetStore';
 import { saveSections } from './saveHelper';
@@ -13,6 +13,17 @@ import { saveSections } from './saveHelper';
 // legacy behaviour: simple interest accrues into current_price until maturity.
 
 export const BOND_FREQUENCIES: BondPayoutFrequency[] = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly', 'At Maturity'];
+
+// 'Custom' principal installments that fall inside the tenure (maturity takes whatever remains)
+export function customInstallments(inv: Pick<Investment, 'purchase_date' | 'maturity_date' | 'principal_schedule'>): PrincipalInstallment[] {
+  const byDate = new Map<string, number>();
+  for (const i of inv.principal_schedule ?? []) {
+    if (!i.date || !(i.amount > 0)) continue;
+    if (i.date <= inv.purchase_date || (inv.maturity_date && i.date >= inv.maturity_date)) continue;
+    byDate.set(i.date, (byDate.get(i.date) ?? 0) + i.amount);
+  }
+  return [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, amount]) => ({ date, amount }));
+}
 
 const MONTHS: Record<Exclude<BondPayoutFrequency, 'At Maturity'>, number> = {
   Monthly: 1, Quarterly: 3, 'Half-Yearly': 6, Yearly: 12,
@@ -105,7 +116,7 @@ function simulate(inv: Investment, stopAt?: string): Simulation {
   const iFreq = inv.interest_frequency!;
   const pFreq = inv.principal_frequency ?? 'At Maturity';
   const im = iFreq === 'At Maturity' ? 0 : MONTHS[iFreq];
-  const pm = pFreq === 'At Maturity' ? 0 : MONTHS[pFreq];
+  const pm = pFreq === 'At Maturity' || pFreq === 'Custom' ? 0 : MONTHS[pFreq];
 
   const interestAnchor = inv.first_payout_date || (im ? addMonths(purchase, im) : maturity);
   // Principal lines up with the interest calendar: with monthly interest and quarterly
@@ -115,7 +126,12 @@ function simulate(inv: Investment, stopAt?: string): Simulation {
     : (pm ? addMonths(purchase, pm) : maturity);
 
   const interestDates = new Set(payoutDates(iFreq, interestAnchor, purchase, maturity));
-  const principalDates = payoutDates(pFreq, principalAnchor, purchase, maturity);
+  // Custom: the listed installments, then maturity repays the remainder
+  const custom = pFreq === 'Custom' ? customInstallments(inv) : [];
+  const customAmount = new Map(custom.map((i) => [i.date, i.amount]));
+  const principalDates = pFreq === 'Custom'
+    ? [...custom.map((i) => i.date), maturity]
+    : payoutDates(pFreq, principalAnchor, purchase, maturity);
   const principalSet = new Set(principalDates);
   const events = [...new Set([...interestDates, ...principalDates])].sort();
 
@@ -143,7 +159,9 @@ function simulate(inv: Investment, stopAt?: string): Simulation {
     }
     if (principalSet.has(d)) {
       principalPaid++;
-      principalOut = principalPaid === principalDates.length ? round2(outstanding) : round2(installment);
+      principalOut = principalPaid === principalDates.length
+        ? round2(outstanding)
+        : round2(Math.min(customAmount.get(d) ?? installment, outstanding));
       outstanding = round2(outstanding - principalOut);
     }
     schedule.push({
