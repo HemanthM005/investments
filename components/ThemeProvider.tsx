@@ -6,9 +6,11 @@ import { useAppStore } from '@/lib/appStore';
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useAppStore((s) => s.theme);
   const setTheme = useAppStore((s) => s.setTheme);
+  const loadSettings = useAppStore((s) => s.loadSettings);
 
-  // Load persisted theme on mount
+  // Load persisted theme + UI settings on mount
   useEffect(() => {
+    loadSettings();
     const saved = localStorage.getItem('ui-theme') as 'classic' | 'glass' | null;
     if (saved && saved !== theme) setTheme(saved);
   // eslint-disable-next-line react-hooks/exhaustive-deps

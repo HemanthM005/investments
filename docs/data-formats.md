@@ -134,6 +134,38 @@ One array, one shape (`Investment`), but the active fields differ by `asset_type
 - `buy_price` = principal per unit. `current_price` is auto-computed from interest accrual.
 - `interest_rate` and `maturity_date` are Bond-only fields.
 
+#### Bond with a payout schedule
+```json
+{
+  "id": "10",
+  "asset_name": "XYZ Finance NCD 11%",
+  "asset_type": "Bond",
+  "sector": "Corporate",
+  "buy_price": 100000,
+  "current_price": 100000,
+  "quantity": 1,
+  "purchase_date": "2026-05-15",
+  "notes": "",
+  "interest_rate": 11,
+  "maturity_date": "2028-05-15",
+  "interest_frequency": "Monthly",
+  "principal_frequency": "Quarterly",
+  "first_payout_date": "2026-06-15",
+  "tds_percent": 10,
+  "payout_account_id": "1",
+  "payout_account_name": "SBI Savings",
+  "status": "active",
+  "bond_payouts": [
+    { "date": "2026-06-15", "interest": 934.25, "tds": 93.43, "principal": 0,
+      "credited_on": "2026-06-15", "account_id": "1", "account_name": "SBI Savings", "tx_id": "tx-uuid" }
+  ]
+}
+```
+- Setting `interest_frequency` (`Monthly | Quarterly | Half-Yearly | Yearly | At Maturity`) switches the bond to scheduled payouts (see `lib/bonds.ts`). Without it, interest accrues into `current_price` as before.
+- `principal_frequency` (same values, default `At Maturity`) repays principal in equal parts; interest is computed on the outstanding principal, actual/365.
+- `first_payout_date` is optional (default: purchase date + one interest period). `tds_percent` is deducted from interest.
+- `bond_payouts[]` records each payout already credited (`tx_id` = the AccountTransaction it created) or `skipped: true` (not received, no money moved). Due payouts are those in the schedule with no record here.
+
 ### 1g. Watchlist (no buy yet)
 ```json
 {
@@ -356,7 +388,10 @@ A transfer writes two entries — one `debit` on the source account, one `credit
   "notes": "4K plan"
 }
 ```
-- `frequency` ∈ `Daily | Weekly | Monthly | Quarterly | Yearly`.
+- `frequency` ∈ `Daily | Weekly | Monthly | Quarterly | Half-Yearly | Yearly | Custom Days`.
+- `Custom Days` uses `cycle_days` (e.g. 28/30/84 for prepaid plans). Paying late restarts the cycle from the payment date.
+- Calendar frequencies store `anchor_day` (1–31) so the bill stays on the same date (31st clamps to month end).
+- `payments[]` (newest first): `{ "date", "amount", "due_date", "expense_id" }` — logged by "Mark Paid"; the latest can be undone.
 - `active: false` pauses the subscription without deleting it.
 
 ---

@@ -2,6 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import { Plus, Pencil, Trash2, CheckCircle, Clock, AlertCircle, HandCoins, ChevronDown } from 'lucide-react';
+
+// Records shown per person before "Show all"
+const RECORDS_PREVIEW = 5;
 import { useMoneyStore, getOutstandingLent, getOutstandingBorrowed } from '@/lib/moneyStore';
 import { useExpenseStore } from '@/lib/expenseStore';
 import { useAssetStore } from '@/lib/assetStore';
@@ -54,12 +57,14 @@ function MoneyModal({
   onClose,
   onSubmit,
   initial,
+  prefill,
   accounts,
 }: {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: Omit<MoneyRecord, 'id'>) => void;
   initial?: MoneyRecord | null;
+  prefill?: Partial<Omit<MoneyRecord, 'id'>> | null; // new record for an existing person
   accounts: AssetAccount[];
 }) {
   const [form, setForm] = useState<Omit<MoneyRecord, 'id'>>(EMPTY_FORM);
@@ -82,7 +87,7 @@ function MoneyModal({
       const { id: _id, ...rest } = initial;
       setForm(rest);
     } else {
-      setForm(EMPTY_FORM);
+      setForm({ ...EMPTY_FORM, date: new Date().toISOString().split('T')[0], ...prefill });
     }
     setErrors({});
   };
@@ -121,7 +126,7 @@ function MoneyModal({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{initial ? 'Edit Record' : 'Add Money Record'}</DialogTitle>
+          <DialogTitle>{initial ? 'Edit Record' : prefill?.person_name ? `Add Record — ${prefill.person_name}` : 'Add Money Record'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Type toggle */}
@@ -541,7 +546,7 @@ function RecordCard({
 // Groups all records for one person into a single card with a breakdown list.
 
 function PersonGroup({
-  name, records, expanded, onToggle, onEdit, onDelete, onSettle, onSettleAll,
+  name, records, expanded, onToggle, onEdit, onDelete, onSettle, onSettleAll, onAdd,
 }: {
   name: string;
   records: MoneyRecord[];
@@ -551,7 +556,9 @@ function PersonGroup({
   onDelete: (r: MoneyRecord) => void;
   onSettle: (r: MoneyRecord) => void;
   onSettleAll: () => void;
+  onAdd: (type: MoneyRecord['type']) => void;
 }) {
+  const [showAll, setShowAll] = useState(false);
   const lentOut = records.filter((r) => r.type === 'lent' && r.status !== 'settled')
     .reduce((s, r) => s + (r.amount - r.settled_amount), 0);
   const borrowedOut = records.filter((r) => r.type === 'borrowed' && r.status !== 'settled')
@@ -559,6 +566,13 @@ function PersonGroup({
   const net = lentOut - borrowedOut;
   const allSettled = records.every((r) => r.status === 'settled');
   const netType = net >= 0 ? 'lent' : 'borrowed';
+
+  // Open records first, then newest first — so a preview never hides something outstanding
+  const sorted = [...records].sort((a, b) =>
+    Number(a.status === 'settled') - Number(b.status === 'settled') || b.date.localeCompare(a.date),
+  );
+  const visible = showAll ? sorted : sorted.slice(0, RECORDS_PREVIEW);
+  const hiddenCount = sorted.length - visible.length;
 
   return (
     <div className={cn(
@@ -589,6 +603,15 @@ function PersonGroup({
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onAdd(netType); }}
+            title={`Add lent/borrowed record for ${name}`}
+            aria-label={`Add record for ${name}`}
+            className="h-7 w-7 flex items-center justify-center rounded-md border border-red-800/50 bg-red-950/30 text-red-400 hover:bg-red-900/40 hover:text-red-300 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
           {!allSettled && net !== 0 && (
             <Button
               size="sm"
@@ -619,7 +642,7 @@ function PersonGroup({
       {/* Collapsible records list */}
       {expanded && (
         <div className="border-t border-[#2a2d3e] divide-y divide-[#1e2133]">
-          {records.map((r) => {
+          {visible.map((r) => {
             const outstanding = r.amount - r.settled_amount;
             const overdue = !r.due_date || r.status === 'settled' ? false : new Date(r.due_date) < new Date();
             const pct = r.amount > 0 ? (r.settled_amount / r.amount) * 100 : 0;
@@ -683,6 +706,15 @@ function PersonGroup({
               </div>
             );
           })}
+          {(hiddenCount > 0 || (showAll && sorted.length > RECORDS_PREVIEW)) && (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              className="w-full px-4 py-2 text-xs font-medium text-indigo-400 hover:bg-white/[0.02] hover:text-indigo-300 transition-colors"
+            >
+              {showAll ? 'Show less' : `Show all ${sorted.length} records (${hiddenCount} more)`}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -721,6 +753,7 @@ export default function MoneyTrackerPage() {
   const { accounts, addTransaction } = useAssetStore();
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<MoneyRecord | null>(null);
+  const [prefill, setPrefill] = useState<Partial<Omit<MoneyRecord, 'id'>> | null>(null);
   const [settleTarget, setSettleTarget] = useState<MoneyRecord | null>(null);
   const [personSettleTarget, setPersonSettleTarget] = useState<{ name: string; records: MoneyRecord[] } | null>(null);
   const [tab, setTab] = useState<'all' | 'lent' | 'borrowed'>('all');
@@ -808,6 +841,13 @@ export default function MoneyTrackerPage() {
     }
     setModalOpen(false);
     setEditTarget(null);
+    setPrefill(null);
+  };
+
+  const openAddFor = (name: string, type: MoneyRecord['type']) => {
+    setEditTarget(null);
+    setPrefill({ person_name: name, type });
+    setModalOpen(true);
   };
 
   const handleDelete = (r: MoneyRecord) => {
@@ -871,7 +911,7 @@ export default function MoneyTrackerPage() {
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Track money you lent and borrowed</p>
         </div>
-        <Button onClick={() => { setEditTarget(null); setModalOpen(true); }} className="gap-2">
+        <Button onClick={() => { setEditTarget(null); setPrefill(null); setModalOpen(true); }} className="gap-2">
           <Plus className="h-4 w-4" /> Add Record
         </Button>
       </div>
@@ -988,6 +1028,7 @@ export default function MoneyTrackerPage() {
                     onDelete={(r) => handleDelete(r)}
                     onSettle={(r) => setSettleTarget(r)}
                     onSettleAll={() => setPersonSettleTarget({ name, records: recs })}
+                    onAdd={(type) => openAddFor(name, type)}
                   />
                 ))
               )}
@@ -1021,6 +1062,7 @@ export default function MoneyTrackerPage() {
                     onDelete={(r) => handleDelete(r)}
                     onSettle={(r) => setSettleTarget(r)}
                     onSettleAll={() => setPersonSettleTarget({ name, records: recs })}
+                    onAdd={(type) => openAddFor(name, type)}
                   />
                 ))
               )}
@@ -1031,9 +1073,10 @@ export default function MoneyTrackerPage() {
 
       <MoneyModal
         open={modalOpen}
-        onClose={() => { setModalOpen(false); setEditTarget(null); }}
+        onClose={() => { setModalOpen(false); setEditTarget(null); setPrefill(null); }}
         onSubmit={handleSubmit}
         initial={editTarget}
+        prefill={prefill}
         accounts={accounts}
       />
 
