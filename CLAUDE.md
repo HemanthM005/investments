@@ -48,12 +48,14 @@ npm run lint    # Lint check
 | `/` | Portfolio dashboard — stats, risk alerts, charts, summary table |
 | `/investments` | Investment CRUD tracker with filters, real-time prices, research popup |
 | `/compare` | Side-by-side stock comparison with radar chart |
+| `/bond-payouts` | Bond interest/principal schedule — due, upcoming, received; credits payouts to accounts |
 | `/expenses` | Daily expense tracker — split bills, auto-deducts from accounts |
 | `/cash-accounts` | Cash & account manager — balances, transactions, transfers |
 | `/money-tracker` | Lent/borrowed tracker — net balance per person |
 | `/subscriptions` | Recurring expense tracker |
 | `/habit-tracker` | Daily habit tracker — streaks, completions |
 | `/planner` | Daily planner — tasks, schedule, notes per day |
+| `/settings` | UI settings (sidebar mode, theme, bond auto-credit) — stored in localStorage |
 | `/india-sectors-report` | India emerging sectors research report |
 | `/invest-3-lakhs-plan` | ₹3 Lakh investment plan guide |
 
@@ -68,14 +70,15 @@ npm run lint    # Lint check
 | `lib/recurringStore.ts` | Zustand store — recurring/subscription expenses |
 | `lib/habitStore.ts` | Zustand store — habit tracker (`data/daily-tracker.json`) |
 | `lib/plannerStore.ts` | Zustand store — daily planner (`data/daily-planner.json`) |
-| `lib/appStore.ts` | App-wide UI state (demo mode, hydration flags, etc.) |
+| `lib/appStore.ts` | App-wide UI state + persisted UI settings (sidebar mode, bond auto-credit) |
+| `lib/bonds.ts` | Bond payout schedule, projection to today's value, credit/undo payouts |
 | `lib/saveHelper.ts` | Writes sections of `data/*.json` via `/api/data` |
 | `lib/utils.ts` | `cn()`, `formatCurrency()`, `formatPercent()`, `computeStats()` |
 | `app/api/data/route.ts` | Read/write sections of `data/portfolio.json`, `data/daily-tracker.json`, `data/daily-planner.json` |
 | `app/api/prices/route.ts` | Fetch live prices (CoinGecko for crypto, Yahoo Finance for stocks) |
 | `app/api/price-history/route.ts` | Fetch historical price data for charts |
 | `app/api/stock-analysis/route.ts` | AI-powered stock analysis via Claude API |
-| `components/Navbar.tsx` | Grouped sidebar nav — permanent at `lg+`, slide-in drawer below `lg` with a compact mobile top bar |
+| `components/Navbar.tsx` | Grouped sidebar nav — at `lg+` an icon rail that expands by click, hover, or stays pinned (Settings); slide-in drawer below `lg` |
 | `components/HydrationProvider.tsx` | Top-level provider that hydrates all Zustand stores from server data on mount |
 | `components/SaveErrorBanner.tsx` | Banner shown when a save to `/api/data` fails |
 | `components/InvestmentModal.tsx` | Add/Edit investment modal |

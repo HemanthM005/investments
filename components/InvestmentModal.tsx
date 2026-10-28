@@ -18,9 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Investment } from '@/lib/types';
+import type { Investment, BondPayoutFrequency } from '@/lib/types';
 import { useAssetStore } from '@/lib/assetStore';
-import { GOLD_PURITY_FACTORS, GOLD_PURITY_OPTIONS } from '@/lib/utils';
+import { GOLD_PURITY_FACTORS, GOLD_PURITY_OPTIONS, formatCurrency } from '@/lib/utils';
+import { BOND_FREQUENCIES, bondSchedule, isScheduledBond, netAmount, projectBond } from '@/lib/bonds';
 
 interface Props {
   open: boolean;
@@ -127,12 +128,11 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
     if (!validate()) return;
     if (isBond && !isWatchlist) {
       const principal = form.buy_price;
-      const current = computeBondCurrentValue(principal, form.interest_rate ?? 0, form.purchase_date, form.maturity_date);
-      onSubmit({
-        ...form,
-        quantity: form.quantity > 0 ? form.quantity : 1,
-        current_price: current,
-      });
+      const quantity = form.quantity > 0 ? form.quantity : 1;
+      const current = form.interest_frequency
+        ? projectBond({ ...form, quantity, id: '' }).current_price
+        : computeBondCurrentValue(principal, form.interest_rate ?? 0, form.purchase_date, form.maturity_date);
+      onSubmit({ ...form, quantity, current_price: current });
     } else {
       onSubmit(form);
     }
@@ -184,7 +184,14 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
               <Label>Asset Type *</Label>
               <Select
                 value={form.asset_type}
-                onValueChange={(v) => setField('asset_type', v as Investment['asset_type'])}
+                onValueChange={(v) => {
+                  setField('asset_type', v as Investment['asset_type']);
+                  // New bonds default to a payout schedule; legacy bonds stay as they are
+                  if (v === 'Bond' && !initialData && !form.interest_frequency) {
+                    setField('interest_frequency', 'Monthly');
+                    setField('principal_frequency', 'At Maturity');
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -252,7 +259,104 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
                   {errors.maturity_date && <p className="text-xs text-red-400">{errors.maturity_date}</p>}
                 </div>
 
-                {form.buy_price > 0 && (form.interest_rate ?? 0) > 0 && form.purchase_date && (() => {
+                <div className="space-y-1.5">
+                  <Label>Interest Paid</Label>
+                  <Select
+                    value={form.interest_frequency ?? '__none__'}
+                    onValueChange={(v) => setField('interest_frequency', v === '__none__' ? undefined : v as BondPayoutFrequency)}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {BOND_FREQUENCIES.map((f) => (
+                        <SelectItem key={f} value={f}>{f === 'At Maturity' ? 'At maturity (cumulative)' : f}</SelectItem>
+                      ))}
+                      <SelectItem value="__none__">Don&apos;t track payouts</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.interest_frequency && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label>Principal Repaid</Label>
+                      <Select
+                        value={form.principal_frequency ?? 'At Maturity'}
+                        onValueChange={(v) => setField('principal_frequency', v as BondPayoutFrequency)}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {BOND_FREQUENCIES.map((f) => (
+                            <SelectItem key={f} value={f}>{f === 'At Maturity' ? 'At maturity (bullet)' : `${f} (in equal parts)`}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="first_payout_date">First Payout Date <span className="text-slate-500 font-normal">(optional)</span></Label>
+                      <Input id="first_payout_date" type="date" value={form.first_payout_date ?? ''}
+                        onChange={(e) => setField('first_payout_date', e.target.value || undefined)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="tds_percent">TDS on Interest (%) <span className="text-slate-500 font-normal">(optional)</span></Label>
+                      <Input id="tds_percent" type="number" step="0.1" min="0" max="100" placeholder="0"
+                        value={form.tds_percent || ''}
+                        onChange={(e) => setField('tds_percent', parseFloat(e.target.value) || 0)} />
+                    </div>
+                    <div className="col-span-2 space-y-1.5">
+                      <Label>Payouts Credited To</Label>
+                      <Select
+                        value={form.payout_account_id || '__none__'}
+                        onValueChange={(v) => {
+                          const acc = accounts.find((a) => a.id === v);
+                          setField('payout_account_id', v === '__none__' ? '' : v);
+                          setField('payout_account_name', acc?.name ?? '');
+                        }}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">None / Don&apos;t credit</SelectItem>
+                          {accounts.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.name}
+                              <span className="ml-1.5 text-xs text-slate-400">({a.category})</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-slate-500">
+                        Each interest/principal payout is logged as a credit to this account on its payout date.
+                        Leave the first payout date empty if it&apos;s one period after purchase.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {form.interest_frequency ? (() => {
+                  const preview = { ...form, quantity: form.quantity > 0 ? form.quantity : 1, id: '' };
+                  if (!isScheduledBond(preview) || (form.interest_rate ?? 0) <= 0) return null;
+                  const schedule = bondSchedule(preview);
+                  const interestPayouts = schedule.filter((p) => p.interest > 0);
+                  const totalInterest = schedule.reduce((s, p) => s + p.interest - p.tds, 0);
+                  const first = schedule[0];
+                  return (
+                    <div className="col-span-2 rounded-md border border-teal-800/40 bg-teal-950/20 px-3 py-2 text-xs text-teal-300 space-y-0.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Payouts:</span>
+                        <span className="font-semibold">{schedule.length} · {interestPayouts.length} with interest</span>
+                      </div>
+                      {first && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">First payout ({first.date}):</span>
+                          <span className="font-semibold">{formatCurrency(netAmount(first))}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Total interest to receive{(form.tds_percent ?? 0) > 0 ? ' (after TDS)' : ''}:</span>
+                        <span className="font-semibold">{formatCurrency(totalInterest)}</span>
+                      </div>
+                    </div>
+                  );
+                })() : (
+                form.buy_price > 0 && (form.interest_rate ?? 0) > 0 && form.purchase_date && (() => {
                   const todayVal = computeBondCurrentValue(form.buy_price, form.interest_rate ?? 0, form.purchase_date, form.maturity_date);
                   let maturityVal: number | null = null;
                   if (form.maturity_date) {
@@ -277,7 +381,7 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
                       )}
                     </div>
                   );
-                })()}
+                })())}
 
                 {!initialData && (
                   <div className="col-span-2 space-y-1.5">

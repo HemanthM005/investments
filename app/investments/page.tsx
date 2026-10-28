@@ -19,6 +19,8 @@ import {
   cn,
 } from '@/lib/utils';
 import InvestmentModal from '@/components/InvestmentModal';
+import { projectBond, bondStatus, isScheduledBond } from '@/lib/bonds';
+import Link from 'next/link';
 import ResearchModal from '@/components/ResearchModal';
 import StockAnalysisDrawer from '@/components/StockAnalysisDrawer';
 import { Button } from '@/components/ui/button';
@@ -54,20 +56,6 @@ const KARAT_MULTIPLIER: Record<string, number> = {
   '18k': 18 / 24,
 };
 
-// Bond current value = principal + simple interest accrued (capped at maturity)
-function bondAccruedValue(inv: Investment): number {
-  if (inv.asset_type !== 'Bond' || !inv.interest_rate || !inv.purchase_date) return inv.current_price;
-  const start = new Date(inv.purchase_date + 'T00:00:00').getTime();
-  let end = Date.now();
-  if (inv.maturity_date) {
-    const m = new Date(inv.maturity_date + 'T00:00:00').getTime();
-    if (m < end) end = m;
-  }
-  if (!isFinite(start) || end <= start) return inv.buy_price;
-  const years = (end - start) / (1000 * 60 * 60 * 24 * 365.25);
-  return Math.round(inv.buy_price * (1 + inv.interest_rate / 100 * years) * 100) / 100;
-}
-
 const ASSET_TYPE_COLORS: Record<string, string> = {
   Stock: 'bg-indigo-900/50 text-indigo-300',
   ETF: 'bg-purple-900/50 text-purple-300',
@@ -91,11 +79,9 @@ export default function InvestmentsPage() {
   const [sellTarget, setSellTarget]     = useState<Investment | null>(null);
   const [editSaleTarget, setEditSaleTarget] = useState<Investment | null>(null);
 
-  // Project bond current prices to today's accrued value (without persisting)
+  // Project bonds to today's value (accrued interest, principal repaid) without persisting
   const projectedInvestments = useMemo(
-    () => investments.map((inv) =>
-      inv.asset_type === 'Bond' ? { ...inv, current_price: bondAccruedValue(inv) } : inv
-    ),
+    () => investments.map((inv) => projectBond(inv)),
     [investments],
   );
 
@@ -297,7 +283,8 @@ export default function InvestmentsPage() {
   };
 
   const openEdit = (inv: Investment) => {
-    setEditTarget(inv);
+    // Rows show projected bond values — edit the stored record, not the projection
+    setEditTarget(investments.find((i) => i.id === inv.id) ?? inv);
     setModalOpen(true);
   };
 
@@ -595,9 +582,25 @@ export default function InvestmentsPage() {
                           {inv.asset_type === 'Bond' && (
                             <p className="text-[10px] text-teal-400/80 mt-0.5">
                               @{inv.interest_rate ?? 0}% p.a.
+                              {inv.interest_frequency && <span> · {inv.interest_frequency.toLowerCase()}</span>}
                               {inv.maturity_date && <span className="text-slate-500"> · matures {inv.maturity_date}</span>}
                             </p>
                           )}
+                          {inv.asset_type === 'Bond' && (() => {
+                            // Schedule comes from the stored bond — `inv` has projected (reduced) principal
+                            const stored = investments.find((i) => i.id === inv.id) ?? inv;
+                            if (!isScheduledBond(stored)) return null;
+                            const st = bondStatus(stored);
+                            return (
+                              <Link href="/bond-payouts" className="block text-[10px] mt-0.5 hover:underline">
+                                {st.due.length > 0
+                                  ? <span className="text-amber-400">{st.due.length} payout{st.due.length > 1 ? 's' : ''} due</span>
+                                  : st.next
+                                  ? <span className="text-slate-500">next {formatCurrency(st.next.interest - st.next.tds + st.next.principal)} on {st.next.date}</span>
+                                  : <span className="text-slate-500">matured</span>}
+                              </Link>
+                            );
+                          })()}
                           {inv.asset_type === 'Gold' && (
                             <p className="text-[10px] text-yellow-400/80 mt-0.5">
                               {inv.gold_purity ?? '24K'} · ₹/gram

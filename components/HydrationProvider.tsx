@@ -7,6 +7,8 @@ import { useAssetStore } from '@/lib/assetStore';
 import { useExpenseStore } from '@/lib/expenseStore';
 import { useRecurringStore } from '@/lib/recurringStore';
 import { useRecurringInvestmentStore } from '@/lib/recurringInvestmentStore';
+import { useAppStore } from '@/lib/appStore';
+import { creditDuePayouts } from '@/lib/bonds';
 
 export default function HydrationProvider({ children }: { children: React.ReactNode }) {
   const hydrateInvestments = useInvestmentStore((s) => s.hydrate);
@@ -35,6 +37,11 @@ export default function HydrationProvider({ children }: { children: React.ReactN
       records
         .filter((r) => r.source_expense_id && !expenseIds.has(r.source_expense_id))
         .forEach((r) => deleteRecord(r.id));
+
+      // Credit bond interest/principal that fell due since the last visit
+      if (useAppStore.getState().settings.bondAutoCredit) {
+        creditDuePayouts({ requireAccount: true });
+      }
     }
     init();
   }, [hydrateInvestments, hydrateMoney, hydrateAssets, hydrateExpenses, hydrateRecurring, hydrateSips]);

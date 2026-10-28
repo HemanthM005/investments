@@ -3,33 +3,38 @@
 import { useState, useMemo } from 'react';
 import {
   Plus, Pencil, Trash2, RefreshCw, AlertCircle, CheckCircle2,
-  X, ChevronDown, PauseCircle, PlayCircle, Zap, Bell,
+  X, ChevronDown, ChevronUp, PauseCircle, PlayCircle, Zap, Bell, Undo2,
 } from 'lucide-react';
 import {
-  useRecurringStore, getNextDueDate, toMonthlyAmount, getTotalMonthly, isOverdue,
+  useRecurringStore, toMonthlyAmount, getTotalMonthly, isOverdue, nextDueAfterPayment, frequencyLabel,
 } from '@/lib/recurringStore';
 import { useExpenseStore } from '@/lib/expenseStore';
 import { useAssetStore } from '@/lib/assetStore';
 import { formatCurrency } from '@/lib/utils';
-import type { RecurringExpense, RecurringFrequency, ExpenseCategory } from '@/lib/types';
+import type { RecurringExpense, SubscriptionFrequency, ExpenseCategory } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
-const FREQUENCIES: RecurringFrequency[] = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly'];
+// Calendar cycles bill on the same date every period (EMIs, insurance, Netflix-style billing)
+const CALENDAR_FREQUENCIES: SubscriptionFrequency[] = ['Monthly', 'Quarterly', 'Half-Yearly', 'Yearly', 'Weekly', 'Daily'];
+// Common prepaid validity periods
+const DAY_PRESETS = [28, 30, 56, 84, 365];
 
 const CATEGORIES: ExpenseCategory[] = [
   'Subscriptions', 'Bills & Utilities', 'Health & Medical', 'Education',
   'Entertainment', 'Food & Dining', 'Transport & Travel', 'Sports & Fitness', 'Loan & EMI', 'Shopping', 'Other',
 ];
 
-const FREQ_BADGE: Record<RecurringFrequency, string> = {
-  Daily:     'bg-slate-700 text-slate-300',
-  Weekly:    'bg-blue-900/40 text-blue-300',
-  Monthly:   'bg-indigo-900/40 text-indigo-300',
-  Quarterly: 'bg-purple-900/40 text-purple-300',
-  Yearly:    'bg-amber-900/40 text-amber-300',
+const FREQ_BADGE: Record<SubscriptionFrequency, string> = {
+  Daily:         'bg-slate-700 text-slate-300',
+  Weekly:        'bg-blue-900/40 text-blue-300',
+  Monthly:       'bg-indigo-900/40 text-indigo-300',
+  Quarterly:     'bg-purple-900/40 text-purple-300',
+  'Half-Yearly': 'bg-pink-900/40 text-pink-300',
+  Yearly:        'bg-amber-900/40 text-amber-300',
+  'Custom Days': 'bg-teal-900/40 text-teal-300',
 };
 
 function today() { return new Date().toISOString().slice(0, 10); }
@@ -51,7 +56,7 @@ function formatDue(dateStr: string): string {
 // ── modal ─────────────────────────────────────────────────────────────────────
 
 const EMPTY: Omit<RecurringExpense, 'id'> = {
-  name: '', amount: 0, frequency: 'Monthly', category: 'Subscriptions',
+  name: '', amount: 0, frequency: 'Custom Days', cycle_days: 30, category: 'Subscriptions',
   payment_source_id: '', payment_source_name: '',
   next_due: today(), start_date: today(), active: true, notes: '',
 };
@@ -85,7 +90,11 @@ function RecurringModal({
     return [...map.entries()];
   }, [accounts]);
 
-  const canSave = form.name.trim().length > 0 && form.amount > 0;
+  const isDayCycle = form.frequency === 'Custom Days';
+  const canSave = form.name.trim().length > 0 && form.amount > 0 && (!isDayCycle || (form.cycle_days ?? 0) > 0);
+  const renewsAfter = form.next_due ? nextDueAfterPayment(
+    { ...form, id: '', anchor_day: isDayCycle ? undefined : Number(form.next_due.split('-')[2]) }, form.next_due,
+  ) : '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -106,25 +115,55 @@ function RecurringModal({
               placeholder="e.g. Netflix, Spotify, Gym, Rent…" />
           </div>
 
-          {/* Amount + Frequency */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">Amount (₹) *</label>
-              <input type="number" min="0" step="0.01" value={form.amount || ''}
-                onChange={(e) => setField('amount', parseFloat(e.target.value) || 0)}
-                className="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                placeholder="0.00" />
+          {/* Amount */}
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">Amount (₹) *</label>
+            <input type="number" min="0" step="0.01" value={form.amount || ''}
+              onChange={(e) => setField('amount', parseFloat(e.target.value) || 0)}
+              className="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+              placeholder="0.00" />
+          </div>
+
+          {/* Billing cycle */}
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">Billing cycle</label>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <button type="button"
+                onClick={() => setForm((f) => ({ ...f, frequency: 'Custom Days', cycle_days: f.cycle_days || 30 }))}
+                className={`rounded-lg border px-3 py-2 text-left transition-colors ${isDayCycle ? 'border-indigo-500 bg-indigo-950/30' : 'border-[#2a2d3e] hover:bg-white/[0.03]'}`}>
+                <p className="text-sm font-medium text-slate-100">Fixed days</p>
+                <p className="text-[11px] text-slate-500">Prepaid plans — 28 / 30 / 84 days</p>
+              </button>
+              <button type="button"
+                onClick={() => setField('frequency', isDayCycle ? 'Monthly' : form.frequency)}
+                className={`rounded-lg border px-3 py-2 text-left transition-colors ${!isDayCycle ? 'border-indigo-500 bg-indigo-950/30' : 'border-[#2a2d3e] hover:bg-white/[0.03]'}`}>
+                <p className="text-sm font-medium text-slate-100">Same date</p>
+                <p className="text-[11px] text-slate-500">EMIs, insurance, monthly bills</p>
+              </button>
             </div>
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">Frequency</label>
+            {isDayCycle ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-slate-500">Every</span>
+                <input type="number" min="1" step="1" value={form.cycle_days || ''}
+                  onChange={(e) => setField('cycle_days', parseInt(e.target.value) || 0)}
+                  className="w-20 bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-2 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500" />
+                <span className="text-xs text-slate-500 mr-1">days</span>
+                {DAY_PRESETS.map((d) => (
+                  <button type="button" key={d} onClick={() => setField('cycle_days', d)}
+                    className={`rounded-md border px-2 py-1 text-xs transition-colors ${form.cycle_days === d ? 'border-indigo-500 text-indigo-300' : 'border-[#2a2d3e] text-slate-500 hover:text-slate-300'}`}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            ) : (
               <div className="relative">
-                <select value={form.frequency} onChange={(e) => setField('frequency', e.target.value as RecurringFrequency)}
+                <select value={form.frequency} onChange={(e) => setField('frequency', e.target.value as SubscriptionFrequency)}
                   className="w-full appearance-none bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
-                  {FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
+                  {CALENDAR_FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-slate-500" />
               </div>
-            </div>
+            )}
           </div>
 
           {/* Category */}
@@ -145,6 +184,13 @@ function RecurringModal({
               <label className="text-xs text-slate-400 mb-1 block">Next Due Date</label>
               <input type="date" value={form.next_due} onChange={(e) => setField('next_due', e.target.value)}
                 className="w-full bg-[#0f1117] border border-[#2a2d3e] rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500" />
+              {renewsAfter && (
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {isDayCycle
+                    ? <>then {renewsAfter} (+{form.cycle_days || 0} days)</>
+                    : <>then {renewsAfter} — stays on day {Number(form.next_due.split('-')[2])}</>}
+                </p>
+              )}
             </div>
             <div>
               <label className="text-xs text-slate-400 mb-1 block">Start Date</label>
@@ -214,83 +260,119 @@ function RecurringModal({
 // ── subscription card ─────────────────────────────────────────────────────────
 
 function SubscriptionCard({
-  item, onEdit, onDelete, onPay, onToggle,
+  item, onEdit, onDelete, onPay, onToggle, onUndoPayment,
 }: {
   item: RecurringExpense;
   onEdit: () => void;
   onDelete: () => void;
   onPay: () => void;
   onToggle: () => void;
+  onUndoPayment: () => void;
 }) {
+  const [showHistory, setShowHistory] = useState(false);
   const days = daysUntil(item.next_due);
   const overdue = isOverdue(item.next_due);
   const dueSoon = days >= 0 && days <= 7;
-  const monthly = toMonthlyAmount(item.amount, item.frequency);
+  const monthly = toMonthlyAmount(item.amount, item.frequency, item.cycle_days);
+  const payments = item.payments ?? [];
 
   return (
-    <div className={`bg-[#1a1d2e] border rounded-xl p-4 flex flex-col gap-3 transition-all
+    <div className={`bg-[#1a1d2e] border rounded-xl flex flex-col overflow-hidden transition-all
       ${!item.active ? 'border-[#2a2d3e] opacity-60'
         : overdue ? 'border-red-700/60'
         : dueSoon ? 'border-amber-700/50'
         : 'border-[#2a2d3e] hover:border-indigo-700/40'}`}>
-
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-semibold text-slate-100 text-sm">{item.name}</p>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${FREQ_BADGE[item.frequency]}`}>
-              {item.frequency}
-            </span>
-            {!item.active && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">Paused</span>
+      <div className="p-4 flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-slate-100 text-sm">{item.name}</p>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${FREQ_BADGE[item.frequency] ?? FREQ_BADGE.Monthly}`}>
+                {frequencyLabel(item)}
+              </span>
+              {!item.active && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">Paused</span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">{item.category}
+              {item.payment_source_name && <> · <span className="text-indigo-400/80">{item.payment_source_name}</span></>}
+            </p>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className="text-lg font-bold text-slate-100">{formatCurrency(item.amount)}</p>
+            {item.frequency !== 'Monthly' && !(item.frequency === 'Custom Days' && item.cycle_days === 30) && (
+              <p className="text-xs text-slate-500">≈ {formatCurrency(monthly)}/mo</p>
             )}
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">{item.category}
-            {item.payment_source_name && <> · <span className="text-indigo-400/80">{item.payment_source_name}</span></>}
-          </p>
         </div>
-        <div className="text-right flex-shrink-0">
-          <p className="text-lg font-bold text-slate-100">{formatCurrency(item.amount)}</p>
-          {item.frequency !== 'Monthly' && (
-            <p className="text-xs text-slate-500">≈ {formatCurrency(monthly)}/mo</p>
+
+        {/* Due status */}
+        {item.active && (
+          <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs
+            ${overdue ? 'bg-red-950/40 text-red-300'
+              : dueSoon ? 'bg-amber-950/40 text-amber-300'
+              : 'bg-[#0f1117] text-slate-400'}`}>
+            {overdue ? <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+              : dueSoon ? <Bell className="h-3.5 w-3.5 flex-shrink-0" />
+              : <RefreshCw className="h-3.5 w-3.5 flex-shrink-0" />}
+            <span className="font-medium">{formatDue(item.next_due)}</span>
+            <span className="text-slate-600 ml-auto">{item.next_due}</span>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 pt-0.5">
+          {item.active && (
+            <Button size="sm" className="flex-1 h-7 text-xs gap-1" onClick={onPay}>
+              <CheckCircle2 className="h-3.5 w-3.5" /> Mark Paid
+            </Button>
           )}
+          <button onClick={onToggle}
+            className="h-7 px-2 rounded-md border border-[#2a2d3e] text-slate-500 hover:text-slate-300 transition-colors text-xs flex items-center gap-1">
+            {item.active
+              ? <><PauseCircle className="h-3.5 w-3.5" /> Pause</>
+              : <><PlayCircle className="h-3.5 w-3.5" /> Resume</>}
+          </button>
+          {payments.length > 0 && (
+            <button onClick={() => setShowHistory((v) => !v)} title="Payment history"
+              className="h-7 px-2 rounded-md border border-[#2a2d3e] text-slate-500 hover:text-slate-300 transition-colors text-xs flex items-center gap-1">
+              {showHistory ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              {payments.length}
+            </button>
+          )}
+          <button onClick={onEdit} className="h-7 w-7 flex items-center justify-center rounded-md border border-[#2a2d3e] text-slate-500 hover:text-indigo-400 transition-colors">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={onDelete} className="h-7 w-7 flex items-center justify-center rounded-md border border-[#2a2d3e] text-slate-500 hover:text-red-400 transition-colors">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 
-      {/* Due status */}
-      {item.active && (
-        <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs
-          ${overdue ? 'bg-red-950/40 text-red-300'
-            : dueSoon ? 'bg-amber-950/40 text-amber-300'
-            : 'bg-[#0f1117] text-slate-400'}`}>
-          {overdue ? <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
-            : dueSoon ? <Bell className="h-3.5 w-3.5 flex-shrink-0" />
-            : <RefreshCw className="h-3.5 w-3.5 flex-shrink-0" />}
-          <span className="font-medium">{formatDue(item.next_due)}</span>
-          <span className="text-slate-600 ml-auto">{item.next_due}</span>
+      {/* Payment history — scrollable, like account transactions */}
+      {showHistory && payments.length > 0 && (
+        <div className="border-t border-[#2a2d3e] bg-[#0f1117]">
+          <p className="px-4 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-600">Payment History</p>
+          <div className="divide-y divide-[#1a1d2e] max-h-48 overflow-y-auto">
+            {payments.map((p, i) => (
+              <div key={`${p.date}-${i}`} className="flex items-center gap-3 px-4 py-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-200">Paid {p.date}</p>
+                  <p className="text-[10px] text-slate-600">for due {p.due_date}</p>
+                </div>
+                <p className="text-sm font-semibold text-slate-200">{formatCurrency(p.amount)}</p>
+                {i === 0 && (
+                  <button onClick={onUndoPayment} title="Undo this payment (removes the expense and restores the due date)"
+                    className="text-slate-600 hover:text-amber-400 transition-colors">
+                    <Undo2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-2 pt-0.5">
-        {item.active && (
-          <Button size="sm" className="flex-1 h-7 text-xs gap-1" onClick={onPay}>
-            <CheckCircle2 className="h-3.5 w-3.5" /> Mark Paid
-          </Button>
-        )}
-        <button onClick={onToggle}
-          className="h-7 px-2 rounded-md border border-[#2a2d3e] text-slate-500 hover:text-slate-300 transition-colors text-xs flex items-center gap-1">
-          {item.active
-            ? <><PauseCircle className="h-3.5 w-3.5" /> Pause</>
-            : <><PlayCircle className="h-3.5 w-3.5" /> Resume</>}
-        </button>
-        <button onClick={onEdit} className="h-7 w-7 flex items-center justify-center rounded-md border border-[#2a2d3e] text-slate-500 hover:text-indigo-400 transition-colors">
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
-        <button onClick={onDelete} className="h-7 w-7 flex items-center justify-center rounded-md border border-[#2a2d3e] text-slate-500 hover:text-red-400 transition-colors">
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
     </div>
   );
 }
@@ -300,6 +382,7 @@ function SubscriptionCard({
 export default function SubscriptionsPage() {
   const { recurring, addRecurring, updateRecurring, deleteRecurring } = useRecurringStore();
   const addExpense = useExpenseStore((s) => s.addExpense);
+  const deleteExpense = useExpenseStore((s) => s.deleteExpense);
 
   const [modal, setModal] = useState<null | (Omit<RecurringExpense, 'id'> & { id?: string })>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'overdue' | 'paused'>('all');
@@ -324,17 +407,31 @@ export default function SubscriptionsPage() {
   function handlePay(item: RecurringExpense) {
     const todayStr = today();
     // Log as a regular expense
-    addExpense({
+    const expenseId = addExpense({
       date: todayStr,
       amount: item.amount,
       category: item.category,
       payment_source_id: item.payment_source_id,
       payment_source_name: item.payment_source_name,
       description: item.name,
-      notes: `Auto-logged from subscription · ${item.frequency}`,
+      notes: `Auto-logged from subscription · ${frequencyLabel(item)}`,
     });
-    // Advance next_due by one period
-    updateRecurring(item.id, { next_due: getNextDueDate(todayStr, item.frequency) });
+    // Advance next_due by one cycle and keep a payment log (newest first)
+    updateRecurring(item.id, {
+      next_due: nextDueAfterPayment(item, todayStr),
+      payments: [
+        { date: todayStr, amount: item.amount, due_date: item.next_due, expense_id: expenseId },
+        ...(item.payments ?? []),
+      ],
+    });
+  }
+
+  function handleUndoPayment(item: RecurringExpense) {
+    const [last, ...rest] = item.payments ?? [];
+    if (!last) return;
+    if (!confirm(`Undo the ${formatCurrency(last.amount)} payment on ${last.date}? The logged expense is removed and the due date goes back to ${last.due_date}.`)) return;
+    if (last.expense_id) deleteExpense(last.expense_id);
+    updateRecurring(item.id, { next_due: last.due_date, payments: rest });
   }
 
   return (
@@ -423,6 +520,7 @@ export default function SubscriptionsPage() {
               onDelete={() => { if (confirm(`Delete "${item.name}"?`)) deleteRecurring(item.id); }}
               onPay={() => handlePay(item)}
               onToggle={() => updateRecurring(item.id, { active: !item.active })}
+              onUndoPayment={() => handleUndoPayment(item)}
             />
           ))}
         </div>
@@ -436,7 +534,7 @@ export default function SubscriptionsPage() {
             {(() => {
               const map: Record<string, number> = {};
               recurring.filter((r) => r.active).forEach((r) => {
-                map[r.category] = (map[r.category] ?? 0) + toMonthlyAmount(r.amount, r.frequency);
+                map[r.category] = (map[r.category] ?? 0) + toMonthlyAmount(r.amount, r.frequency, r.cycle_days);
               });
               const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
               return (
@@ -468,7 +566,11 @@ export default function SubscriptionsPage() {
         <RecurringModal
           initial={modal}
           onClose={() => setModal(null)}
-          onSave={(data) => {
+          onSave={(raw) => {
+            // Calendar cycles remember their billing day so 31st-of-month bills don't drift
+            const data = raw.frequency === 'Custom Days'
+              ? { ...raw, anchor_day: undefined }
+              : { ...raw, cycle_days: undefined, anchor_day: Number(raw.next_due.split('-')[2]) };
             if (data.id) updateRecurring(data.id, data);
             else addRecurring(data);
             setModal(null);

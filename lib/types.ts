@@ -21,6 +21,15 @@ export interface Investment {
   gold_gst?: number;                   // Gold only — total GST paid (₹)
   interest_rate?: number;   // Bond only — coupon/interest rate % p.a.
   maturity_date?: string;   // Bond only — YYYY-MM-DD when bond matures
+  // Bond payout schedule — when interest_frequency is set, interest/principal are paid
+  // out on a schedule (see lib/bonds.ts) instead of accruing into current_price.
+  interest_frequency?: BondPayoutFrequency;  // Bond only — how often interest is paid
+  principal_frequency?: BondPayoutFrequency; // Bond only — how principal is repaid (omitted = At Maturity)
+  first_payout_date?: string;       // Bond only — YYYY-MM-DD of first interest payout (omitted = purchase + 1 period)
+  payout_account_id?: string;       // Bond only — AssetAccount.id credited on each payout
+  payout_account_name?: string;     // snapshot of account name
+  tds_percent?: number;             // Bond only — tax deducted at source on interest (%), 0 if none
+  bond_payouts?: BondPayout[];      // Bond only — payouts already received/credited
   gold_purity?: GoldPurity; // Gold only — karat; live price scaled by purity (omitted = 24K)
   _deleted?: boolean;       // soft-delete tombstone — filtered from UI, kept in file
   // Sale details — populated when status === 'sold'
@@ -30,6 +39,20 @@ export interface Investment {
   credited_to_account_id?: string;   // AssetAccount.id — account credited on sale
   credited_to_account_name?: string; // snapshot of account name at sale time
   sale_credited?: boolean;           // true once credit transaction was successfully written to the account
+}
+
+export type BondPayoutFrequency = 'Monthly' | 'Quarterly' | 'Half-Yearly' | 'Yearly' | 'At Maturity';
+
+export interface BondPayout {
+  date: string;             // scheduled payout date (YYYY-MM-DD) — unique per bond
+  interest: number;         // gross interest for the period
+  tds: number;              // tax deducted from interest
+  principal: number;        // principal repaid on this date
+  credited_on: string;      // YYYY-MM-DD when it was recorded
+  account_id?: string;      // AssetAccount.id credited (omitted = recorded without an account)
+  account_name?: string;
+  tx_id?: string;           // AccountTransaction.id — used to undo the credit
+  skipped?: boolean;        // true = marked as not received (missed/defaulted) — no money moved
 }
 
 export interface MoneyRecord {
@@ -137,11 +160,24 @@ export interface SpentFor {
 
 export type RecurringFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'Quarterly' | 'Yearly';
 
+// Subscriptions additionally support half-yearly (insurance) and a fixed day
+// cycle ("Custom Days" + cycle_days, e.g. 28/30/84-day prepaid plans).
+export type SubscriptionFrequency = RecurringFrequency | 'Half-Yearly' | 'Custom Days';
+
+export interface SubscriptionPayment {
+  date: string;                  // YYYY-MM-DD paid
+  amount: number;
+  due_date: string;              // the due date this payment covered
+  expense_id?: string;           // Expense logged for this payment
+}
+
 export interface RecurringExpense {
   id: string;
   name: string;                  // e.g. "Netflix", "Gym"
   amount: number;
-  frequency: RecurringFrequency;
+  frequency: SubscriptionFrequency;
+  cycle_days?: number;           // 'Custom Days' only — length of one cycle (e.g. 28, 30, 84)
+  anchor_day?: number;           // calendar frequencies — day of month the bill falls on (1–31)
   category: ExpenseCategory;
   payment_source_id: string;     // AssetAccount.id
   payment_source_name: string;
@@ -149,6 +185,7 @@ export interface RecurringExpense {
   start_date: string;
   active: boolean;               // false = paused
   notes: string;
+  payments?: SubscriptionPayment[]; // newest first
 }
 
 export interface RecurringInvestment {

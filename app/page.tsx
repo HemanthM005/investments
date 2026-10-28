@@ -12,6 +12,7 @@ import { useAssetStore, getTotalBalance } from '@/lib/assetStore';
 import { useExpenseStore, getTodaySpend, getThisMonthSpend, getSpendByCategory } from '@/lib/expenseStore';
 import { useRecurringStore, getTotalMonthly, getDueSoon, isOverdue } from '@/lib/recurringStore';
 import { computeStats, formatCurrency, formatPercent, getPnlPercent } from '@/lib/utils';
+import { projectBond } from '@/lib/bonds';
 import PortfolioCharts from '@/components/PortfolioCharts';
 import InvestmentTable from '@/components/InvestmentTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +21,8 @@ import { Button } from '@/components/ui/button';
 export default function DashboardPage() {
   const investments = useInvestmentStore((s) => s.investments);
   const activeInvestments = useMemo(
-    () => investments.filter((inv) => !inv.status || inv.status === 'active'),
+    // Bonds projected to today's value (same as the Investments page)
+    () => investments.filter((inv) => !inv.status || inv.status === 'active').map((inv) => projectBond(inv)),
     [investments]
   );
   const moneyRecords = useMoneyStore((s) => s.records);

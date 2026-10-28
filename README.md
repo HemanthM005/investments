@@ -12,6 +12,7 @@ A modern, dark-themed personal finance dashboard for the Indian market. Track in
 - **AI Stock Analysis** — Research drawer with AI-powered analysis per stock
 - **Interactive Charts** — Portfolio allocation (pie), sector distribution (bar), P&L by asset (bar)
 - **Risk Indicators** — Alerts for >20% loss, >50% gain, and >40% concentration
+- **Bond Payouts** — Bonds pay interest monthly / quarterly / half-yearly / yearly / at maturity, with optional amortising principal and TDS; each payout is credited to the linked bank account (automatically or on confirm) and tracked on its own page — due, upcoming 12 months, received history with undo
 
 ### Expenses
 - **Daily Expense Tracker** — Log expenses with category, account, and notes
@@ -30,9 +31,17 @@ A modern, dark-themed personal finance dashboard for the Indian market. Track in
 - **Lent / Borrowed** — Track money given to or taken from people
 - **Net Balance per Person** — One card per person combining all lent + borrowed records; net determines which column they appear in
 - **Split Linkage** — Expense splits automatically create money records; editing/deleting syncs both
+- **Quick Add** — Red **+** on a person's card adds a lent/borrowed record with their name pre-filled
+- **Compact Cards** — Shows 5 records per person (open ones first) with a "Show all" toggle
 
 ### Subscriptions
-- **Recurring Expenses** — Track monthly/yearly subscriptions with next due date
+- **Recurring Expenses** — Track subscriptions, EMIs and insurance with next due date
+- **Billing Cycles** — Fixed-day cycles (28 / 30 / 84-day prepaid plans) or same-date calendar billing (monthly, quarterly, half-yearly, yearly) that stays on the bill date
+- **Payment History** — "Mark Paid" logs an expense and keeps a scrollable history per subscription; the latest payment can be undone
+
+### App
+- **Collapsible Sidebar** — Icon-only rail by default; expand by click, on hover, or keep it always expanded
+- **Settings** — Choose sidebar behaviour, theme, and bond auto-credit (saved per device)
 
 ## Tech Stack
 
@@ -66,10 +75,12 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `/` | Portfolio dashboard with charts and analytics |
 | `/investments` | Investment CRUD tracker with real-time prices and AI research |
 | `/compare` | Side-by-side stock comparison with radar chart |
+| `/bond-payouts` | Bond interest/principal payouts — due, upcoming, received |
 | `/expenses` | Daily expense tracker with bill splitting |
 | `/cash-accounts` | Cash & account manager with transaction history |
 | `/money-tracker` | Track money lent and borrowed, net per person |
 | `/subscriptions` | Recurring subscription tracker |
+| `/settings` | Sidebar, theme, and bond auto-credit preferences |
 | `/india-sectors-report` | India emerging sectors investment research report |
 | `/invest-3-lakhs-plan` | How to invest ₹3 lakhs guide |
 
