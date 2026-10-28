@@ -12,7 +12,7 @@ A modern, dark-themed personal finance dashboard for the Indian market. Track in
 - **AI Stock Analysis** — Research drawer with AI-powered analysis per stock
 - **Interactive Charts** — Portfolio allocation (pie), sector distribution (bar), P&L by asset (bar)
 - **Risk Indicators** — Alerts for >20% loss, >50% gain, and >40% concentration
-- **Bond Payouts** — Bonds pay interest monthly / quarterly / half-yearly / yearly / at maturity, with optional amortising principal and TDS; each payout is credited to the linked bank account (automatically or on confirm) and tracked on its own page — due, upcoming 12 months, received history with undo
+- **Bond Payouts** — Bonds pay interest monthly / quarterly / half-yearly / yearly / at maturity, with principal at maturity, in equal parts, or on custom dates you choose, plus TDS; each payout is credited to the linked bank account (automatically or on confirm) and tracked on its own page — due, upcoming 12 months, received history with undo
 
 ### Expenses
 - **Daily Expense Tracker** — Log expenses with category, account, and notes

@@ -18,10 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Investment, BondPayoutFrequency } from '@/lib/types';
+import { Plus, X } from 'lucide-react';
+import type { Investment, BondPayoutFrequency, PrincipalFrequency, PrincipalInstallment } from '@/lib/types';
 import { useAssetStore } from '@/lib/assetStore';
 import { GOLD_PURITY_FACTORS, GOLD_PURITY_OPTIONS, formatCurrency } from '@/lib/utils';
-import { BOND_FREQUENCIES, bondSchedule, isScheduledBond, netAmount, projectBond } from '@/lib/bonds';
+import { BOND_FREQUENCIES, bondSchedule, customInstallments, isScheduledBond, netAmount, projectBond } from '@/lib/bonds';
 
 interface Props {
   open: boolean;
@@ -111,6 +112,11 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
       if ((form.interest_rate ?? 0) <= 0) e.interest_rate = 'Interest rate must be greater than 0';
       if (!form.maturity_date) e.maturity_date = 'Maturity date is required';
       if (!form.purchase_date) e.purchase_date = 'Purchase date is required';
+      if (form.interest_frequency && form.principal_frequency === 'Custom') {
+        const principal = form.buy_price * (form.quantity > 0 ? form.quantity : 1);
+        const scheduled = customInstallments(form).reduce((s, i) => s + i.amount, 0);
+        if (scheduled > principal + 0.005) e.principal_schedule = 'Installments add up to more than the principal';
+      }
     } else {
       if (form.current_price <= 0) e.current_price = 'Current price must be greater than 0';
       if (!isWatchlist) {
@@ -280,16 +286,68 @@ export default function InvestmentModal({ open, onClose, onSubmit, initialData }
                       <Label>Principal Repaid</Label>
                       <Select
                         value={form.principal_frequency ?? 'At Maturity'}
-                        onValueChange={(v) => setField('principal_frequency', v as BondPayoutFrequency)}
+                        onValueChange={(v) => setField('principal_frequency', v as PrincipalFrequency)}
                       >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {BOND_FREQUENCIES.map((f) => (
                             <SelectItem key={f} value={f}>{f === 'At Maturity' ? 'At maturity (bullet)' : `${f} (in equal parts)`}</SelectItem>
                           ))}
+                          <SelectItem value="Custom">Custom — specific dates</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                    {form.principal_frequency === 'Custom' && (() => {
+                      const principal = form.buy_price * (form.quantity > 0 ? form.quantity : 1);
+                      const rows = form.principal_schedule ?? [];
+                      const valid = customInstallments(form);
+                      const scheduled = valid.reduce((s, i) => s + i.amount, 0);
+                      const remaining = principal - scheduled;
+                      const setRows = (next: PrincipalInstallment[]) => setField('principal_schedule', next);
+                      const updateRow = (idx: number, patch: Partial<PrincipalInstallment>) =>
+                        setRows(rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+                      return (
+                        <div className="col-span-2 space-y-2 rounded-md border border-[#2a2d3e] bg-[#0f1117] p-3">
+                          <p className="text-xs text-slate-400">
+                            Principal repayments on specific dates. Whatever is left is repaid on the maturity date.
+                          </p>
+                          {rows.map((r, idx) => {
+                            const outOfRange = !!r.date && (r.date <= form.purchase_date || (!!form.maturity_date && r.date >= form.maturity_date));
+                            return (
+                              <div key={idx} className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <Input type="date" value={r.date} className="flex-1"
+                                    onChange={(e) => updateRow(idx, { date: e.target.value })} />
+                                  <Input type="number" step="1" min="0" placeholder="₹ amount" value={r.amount || ''} className="w-32"
+                                    onChange={(e) => updateRow(idx, { amount: parseFloat(e.target.value) || 0 })} />
+                                  <span className="w-12 text-right text-xs text-slate-500">
+                                    {principal > 0 && r.amount > 0 ? `${Math.round((r.amount / principal) * 1000) / 10}%` : ''}
+                                  </span>
+                                  <button type="button" onClick={() => setRows(rows.filter((_, i) => i !== idx))}
+                                    aria-label="Remove installment" className="text-slate-500 hover:text-red-400">
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                                {outOfRange && <p className="text-xs text-amber-400">Must be after purchase and before maturity — ignored.</p>}
+                              </div>
+                            );
+                          })}
+                          <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                            onClick={() => setRows([...rows, { date: '', amount: 0 }])}>
+                            <Plus className="h-3.5 w-3.5" /> Add installment
+                          </Button>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-500">Scheduled {formatCurrency(scheduled)} of {formatCurrency(principal)}</span>
+                            <span className={remaining < 0 ? 'text-red-400' : 'text-teal-300'}>
+                              {remaining < 0
+                                ? `${formatCurrency(-remaining)} over the principal`
+                                : `${formatCurrency(remaining)} at maturity`}
+                            </span>
+                          </div>
+                          {errors.principal_schedule && <p className="text-xs text-red-400">{errors.principal_schedule}</p>}
+                        </div>
+                      );
+                    })()}
                     <div className="space-y-1.5">
                       <Label htmlFor="first_payout_date">First Payout Date <span className="text-slate-500 font-normal">(optional)</span></Label>
                       <Input id="first_payout_date" type="date" value={form.first_payout_date ?? ''}

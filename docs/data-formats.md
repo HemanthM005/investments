@@ -163,6 +163,7 @@ One array, one shape (`Investment`), but the active fields differ by `asset_type
 ```
 - Setting `interest_frequency` (`Monthly | Quarterly | Half-Yearly | Yearly | At Maturity`) switches the bond to scheduled payouts (see `lib/bonds.ts`). Without it, interest accrues into `current_price` as before.
 - `principal_frequency` (same values, default `At Maturity`) repays principal in equal parts; interest is computed on the outstanding principal, actual/365.
+- `principal_frequency: "Custom"` uses `principal_schedule: [{ "date": "2027-01-10", "amount": 20000 }, …]` (₹ for the whole holding). Entries outside purchase→maturity are ignored; whatever is left is repaid at maturity.
 - `first_payout_date` is optional (default: purchase date + one interest period). `tds_percent` is deducted from interest.
 - `bond_payouts[]` records each payout already credited (`tx_id` = the AccountTransaction it created) or `skipped: true` (not received, no money moved). Due payouts are those in the schedule with no record here.
 
